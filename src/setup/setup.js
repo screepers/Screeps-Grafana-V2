@@ -139,7 +139,7 @@ async function Setup(mArgv) {
   UpdateTraefikConfigFolder();
 }
 
-if (process.argv[2]=== "setup") Setup();
+if (process.argv[2] === 'setup') Setup();
 
 module.exports = Setup;
 

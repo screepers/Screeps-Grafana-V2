@@ -5,19 +5,6 @@ volumes:
   go-carbon_data:
 
 services:
-  stats-getter:
-    build:
-      context: .
-      dockerfile: ./src/pushStats/Dockerfile
-    volumes:
-      - ./logs/statsGetter:/app/logs
-    depends_on:
-      - carbon-relay-ng
-    environment:
-      - PREFIX=
-      - DISABLE_PUSHGATEWAY=false
-      - SERVER_PORT=21025
-      - INCLUDE_PUSH_STATUS_API=false
   carbon-relay-ng:
     image: grafana/carbon-relay-ng
     depends_on:
