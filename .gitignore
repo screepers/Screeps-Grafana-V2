@@ -1,6 +1,7 @@
 # Files
 docker-compose.yml
 .env
+users.json
 
 # Folders
 node_modules

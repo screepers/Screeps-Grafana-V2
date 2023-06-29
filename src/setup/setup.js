@@ -31,7 +31,7 @@ function UpdateEnvFile() {
   let exampleEnvText = fs.readFileSync(exampleEnvFilePath, 'utf8');
   exampleEnvText = exampleEnvText
     .replace('GRAFANA_PORT=3000', `GRAFANA_PORT=${grafanaPort}`)
-    .replace('COMPOSE_PROJECT_NAME=grafana', `COMPOSE_PROJECT_NAME=grafana-${!argv.traefik ? grafanaPort : 'standalone'}`)
+    .replace('COMPOSE_PROJECT_NAME=screeps-grafana', `COMPOSE_PROJECT_NAME=screeps-grafana-${!argv.traefik ? grafanaPort : 'standalone'}`)
     .replace('COMPOSE_FILE=./docker-compose.yml', `COMPOSE_FILE=${join(__dirname, '../../docker-compose.yml')}`);
   if (serverPort) exampleEnvText = exampleEnvText.replace('SERVER_PORT=21025', `SERVER_PORT=${serverPort}`);
 
@@ -74,6 +74,16 @@ function UpdateTraefikConfigFolder() {
   if (fs.existsSync(traefikConfigFolder) && !argv.force) return console.log('Traefik config folder already exists, use --force to overwrite it');
 
   fse.copySync(join(__dirname, '../../traefikConfig.example'), traefikConfigFolder);
+}
+
+function UpdateUsersFile() {
+  const usersFile = join(__dirname, '../../users.json');
+  if (fs.existsSync(usersFile) && !argv.force) return console.log('Users file already exists, use --force to overwrite it');
+
+  const exampleUsersFilePath = join(__dirname, '../../users.example.json');
+  const exampleUsersText = fs.readFileSync(exampleUsersFilePath, 'utf8');
+  fs.writeFileSync(usersFile, exampleUsersText);
+  console.log('Users file created');
 }
 
 function UpdateGrafanaConfigFolder() {
@@ -133,6 +143,8 @@ async function Setup(mArgv) {
     : 3000;
   argv.grafanaPort = grafanaPort;
   serverPort = argv.serverPort;
+
+  UpdateUsersFile()
   UpdateEnvFile();
   await UpdateDockerComposeFile();
   UpdateGrafanaConfigFolder();
