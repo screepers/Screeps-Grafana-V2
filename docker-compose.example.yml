@@ -17,8 +17,8 @@ networks:
 x-logging: &default-logging
   driver: "local"
   options:
-    max-size: "50m"
-    max-file: "1"
+    max-size: "20m"
+    max-file: "5"
 
 services:
   stats-getter:
