@@ -82,6 +82,7 @@ Update all .example files and/or folders to match your needs. This step is not r
 * `--password`: overwrite the password for the Grafana admin user
 * `--defaultRetention`: overwrite the default retention for the default retention polic of all not regex'd retention paths.
 * `--enableAnonymousAccess`: enable anonymous access to Grafana
+* `--traefikHost`: use only traefik forwarding
 
 #### Network
 
@@ -92,8 +93,7 @@ Update all .example files and/or folders to match your needs. This step is not r
 #### Exporting
 
 * `--deleteLogs`: deletes the logs folder
-* `--deleteWhsiper`: deletes the carbon whsiper folder
-
+* `--removeWhisper`: Deletes the carbon whisper folder
 * `--removeVolumes`: Remove all volumes, including the grafana database.
 
 ## Usage
