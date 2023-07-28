@@ -3,6 +3,7 @@ import cron from 'node-cron';
 // eslint-disable-next-line import/no-unresolved
 import graphite from 'graphite';
 import { createLogger, format, transports } from 'winston';
+import 'winston-daily-rotate-file';
 import fs from 'fs';
 import * as dotenv from 'dotenv';
 // eslint-disable-next-line import/no-unresolved
@@ -16,6 +17,24 @@ let lastUpload = new Date().getTime();
 const users = JSON.parse(fs.readFileSync('users.json'));
 dotenv.config();
 
+const pushTransport = new transports.DailyRotateFile({
+  filename: 'logs/push-%DATE%.log',
+  auditFile: 'logs/push-audit.json',
+  datePattern: 'YYYY-MM-DD',
+  zippedArchive: true,
+  maxSize: '20m',
+  maxFiles: '14d'
+});
+const cronTransport = new transports.DailyRotateFile({
+  filename: 'logs/cron-%DATE%.log',
+  auditFile: 'logs/cron-audit.json',
+  datePattern: 'YYYY-MM-DD',
+  zippedArchive: true,
+  maxSize: '20m',
+  maxFiles: '14d'
+});
+
+
 const client = graphite.createClient('plaintext://carbon-relay-ng:2003/');
 const { combine, timestamp, prettyPrint } = format;
 const logger = createLogger({
@@ -23,7 +42,7 @@ const logger = createLogger({
     timestamp(),
     prettyPrint(),
   ),
-  transports: [new transports.File({ filename: 'logs/push.log' })],
+  transports: [pushTransport],
 });
 
 const cronLogger = createLogger({
@@ -31,7 +50,7 @@ const cronLogger = createLogger({
     timestamp(),
     prettyPrint(),
   ),
-  transports: [new transports.File({ filename: 'logs/cron.log' })],
+  transports: [cronTransport],
 });
 
 class ManageStats {
@@ -208,4 +227,3 @@ if (process.env.INCLUDE_PUSH_STATUS_API === 'true') {
     res.json({ result: diffCompleteMinutes < 300, lastUpload, diffCompleteMinutes });
   });
 }
-	

@@ -10,6 +10,7 @@ import * as dotenv from 'dotenv';
 import { join, dirname } from 'path';
 
 import { createLogger, format, transports } from 'winston';
+import 'winston-daily-rotate-file';
 
 const users = JSON.parse(fs.readFileSync('users.json'));
 
@@ -21,13 +22,20 @@ const needsPrivateHost = users.some((u) => u.type !== 'mmo' && !u.host);
 const gunzipAsync = util.promisify(zlib.gunzip);
 const { combine, timestamp, prettyPrint } = format;
 
+const transport = new transports.DailyRotateFile({
+  filename: 'logs/api-%DATE%.log',
+  auditFile: 'logs/api-audit.json',
+  datePattern: 'YYYY-MM-DD',
+  zippedArchive: true,
+  maxSize: '20m',
+  maxFiles: '14d'
+});
 const logger = createLogger({
   format: combine(
     timestamp(),
     prettyPrint(),
   ),
-  transports: [new transports.File({ filename: 'logs/api.log' }),
-    new transports.File({ filename: 'logs/api_error.log', level: 'error' })],
+  transports: [transport],
 });
 
 async function gz(data) {
