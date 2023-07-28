@@ -12,6 +12,63 @@
 
 ## Setup
 
+1. Update all .example files and/or folders to match your needs. This step is not required if you are using the default setup.
+2. Add your own Grafana variables in `grafanaConfig/.env.grafana`. This file will be updated after a volume reset.
+
+### User Setup
+
+1. Remove all users from the setup
+2. Add users in the following format:
+
+A. MMO:
+
+```json
+{
+"prefix": "a.b.c",
+"username": "PandaMaster",
+"type": "mmo",
+"shards": ["shard0"],
+"token": "TOKEN_FOR_THIS_USER!",
+}
+```
+
+B. Private:
+
+```json
+{
+"prefix": "a.b.c",
+"username": "W1N1",
+"type": "private",
+"shards": ["screeps"],
+"password": "password",
+}
+```
+
+If the private server is not hosted on localhost, add the host to the user:
+
+```json
+{
+"username": "W1N1",
+"type": "private",
+"shards": ["screeps"],
+"password": "password",
+"host": "123.456.789",
+}
+```
+
+If the segment of the stats is not memory, add it to the user:
+
+```json
+{
+"username": "W1N1",
+"type": "private",
+"shards": ["screeps"],
+"password": "password",
+"host": "123.456.789",
+"segment": 0,
+}
+```
+
 Update all .example files and/or folders to match your needs. This step is not required if you are using the default setup.
 
 ### Run Commands

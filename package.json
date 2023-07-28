@@ -1,12 +1,12 @@
 {
-    "name": "grafana-go_carbon",
+    "name": "screeps-grafana-go_carbon",
     "version": "0.1.1",
     "scripts": {
         "setup": "node src/setup/setup.js setup", 
-        "start:standalone": "node src/setup/index.js --grafanaPort=3000 --relayPort=2003",
-        "start:standalone-traefik": "node src/setup/index.js --traefik --grafanaPort=3000 --relayPort=2003 --grafanaDomain=grafana.localhost",
+        "start": "node src/setup/index.js --grafanaPort=3000",
         "lint": "eslint src/**/*.js && eslint dashboards/**/*.js",
-        "lint:fix": "eslint src/**/* --fix && eslint dashboards/**/*.js --fix"
+        "lint:fix": "eslint src/**/* --fix && eslint dashboards/**/*.js --fix",
+        "update-stats-getter": "docker-compose up --detach --build"
     },
     "dependencies": {
         "axios": "^0.27.2",
@@ -22,7 +22,7 @@
         "eslint-plugin-import": "^2.26.0"
     },
     "bin": {
-        "grafana-go_carbon": "./bin/setup.js"
+        "screeps-grafana-go_carbon": "./bin/setup.js"
     },
     "files": [
         "src",

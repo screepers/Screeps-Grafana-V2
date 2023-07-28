@@ -21,6 +21,18 @@ x-logging: &default-logging
     max-file: "1"
 
 services:
+  stats-getter:
+    build:
+      context: .
+      dockerfile: ./src/pushStats/Dockerfile
+    volumes:
+      - ./logs/statsGetter:/app/logs
+    depends_on:
+      - carbon-relay-ng
+    environment:
+      - PREFIX=
+      - SERVER_PORT=21025
+      - INCLUDE_PUSH_STATUS_API=false
   carbon-relay-ng:
     image: grafana/carbon-relay-ng
     depends_on:
