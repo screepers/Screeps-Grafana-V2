@@ -6,10 +6,8 @@ volumes:
 
 networks:
   internal:
-    name: internal
     driver: bridge
   external:
-    name: external
     driver: bridge
   #t#htraefik-net:
   #t#h  external: true
@@ -94,6 +92,8 @@ services:
   #t    - "traefik.http.routers.grafana.rule=Host(`grafana.localhost`)"
   #t#h    - "traefik.docker.network=traefik-net"
   #t    - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+  #t#h    - "traefik.http.routers.grafana.entrypoints=websecure"
+  #t#h    - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
   #ttraefik:
   #t  image: traefik:v2.5.4
   #t  container_name: traefik
