@@ -78,6 +78,8 @@ services:
       - ./logs/grafana:/var/log/grafana
     ports:
       - 3000:3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: "curl -fsSL -o /dev/null http://localhost:3000/login"
       interval: 10s
