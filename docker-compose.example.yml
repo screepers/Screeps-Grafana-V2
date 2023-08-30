@@ -60,11 +60,6 @@ services:
       - ./logs/carbonApi:/log
     depends_on:
       - go-carbon
-    healthcheck:
-      test: "curl -fsSL -o /dev/null http://go-carbon:8080/lb_check"
-      interval: 10s
-      timeout: 1s
-      retries: 3
     networks:
       - internal
       - external
