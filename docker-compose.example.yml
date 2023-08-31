@@ -78,7 +78,7 @@ services:
     healthcheck:
       test: "curl -fsSL -o /dev/null http://localhost:3000/login"
       interval: 10s
-      timeout: 1s
+      timeout: 5s
       retries: 3
     networks:
       - external
