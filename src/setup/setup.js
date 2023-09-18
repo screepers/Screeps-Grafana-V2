@@ -78,13 +78,6 @@ async function UpdateDockerComposeFile() {
   console.log('Docker-compose file created');
 }
 
-function UpdateTraefikConfigFolder() {
-  const traefikConfigFolder = join(__dirname, '../../traefikConfig');
-  if (fs.existsSync(traefikConfigFolder) && !argv.force) return console.log('Traefik config folder already exists, use --force to overwrite it');
-
-  fse.copySync(join(__dirname, '../../traefikConfig.example'), traefikConfigFolder);
-}
-
 function UpdateUsersFile() {
   const usersFile = join(__dirname, '../../users.json');
   if (fs.existsSync(usersFile) && !argv.force) return console.log('Users file already exists, use --force to overwrite it');
@@ -162,7 +155,6 @@ async function Setup(mArgv) {
   UpdateEnvFile();
   await UpdateDockerComposeFile();
   UpdateGrafanaConfigFolder();
-  UpdateTraefikConfigFolder();
 }
 
 if (process.argv[2] === 'setup') Setup();
