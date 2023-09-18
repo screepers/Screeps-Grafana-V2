@@ -9,3 +9,5 @@ go-carbon-storage/
 **/*.log
 .eslintrc.js
 **/*.md
+**/*.json
+Dockerfile

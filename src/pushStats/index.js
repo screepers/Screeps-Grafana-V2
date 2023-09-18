@@ -3,6 +3,7 @@ import cron from 'node-cron';
 // eslint-disable-next-line import/no-unresolved
 import graphite from 'graphite';
 import { createLogger, format, transports } from 'winston';
+// eslint-disable-next-line import/no-unresolved
 import 'winston-daily-rotate-file';
 import fs from 'fs';
 import * as dotenv from 'dotenv';
@@ -23,7 +24,7 @@ const pushTransport = new transports.DailyRotateFile({
   datePattern: 'YYYY-MM-DD',
   zippedArchive: true,
   maxSize: '20m',
-  maxFiles: '14d'
+  maxFiles: '14d',
 });
 const cronTransport = new transports.DailyRotateFile({
   filename: 'logs/cron-%DATE%.log',
@@ -31,9 +32,8 @@ const cronTransport = new transports.DailyRotateFile({
   datePattern: 'YYYY-MM-DD',
   zippedArchive: true,
   maxSize: '20m',
-  maxFiles: '14d'
+  maxFiles: '14d',
 });
-
 
 const client = graphite.createClient('plaintext://carbon-relay-ng:2003/');
 const { combine, timestamp, prettyPrint } = format;

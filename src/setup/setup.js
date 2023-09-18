@@ -158,7 +158,7 @@ async function Setup(mArgv) {
   argv.grafanaPort = grafanaPort;
   serverPort = argv.serverPort;
 
-  UpdateUsersFile()
+  UpdateUsersFile();
   UpdateEnvFile();
   await UpdateDockerComposeFile();
   UpdateGrafanaConfigFolder();

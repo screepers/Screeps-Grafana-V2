@@ -10,6 +10,8 @@ import * as dotenv from 'dotenv';
 import { join, dirname } from 'path';
 
 import { createLogger, format, transports } from 'winston';
+
+// eslint-disable-next-line import/no-unresolved
 import 'winston-daily-rotate-file';
 
 const users = JSON.parse(fs.readFileSync('users.json'));
@@ -28,7 +30,7 @@ const transport = new transports.DailyRotateFile({
   datePattern: 'YYYY-MM-DD',
   zippedArchive: true,
   maxSize: '20m',
-  maxFiles: '14d'
+  maxFiles: '14d',
 });
 const logger = createLogger({
   format: combine(
