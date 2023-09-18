@@ -1,9 +1,0 @@
-[http.middlewares.EXAMPLESUBDOMAIN-redirect-org-regex.redirectregex]
-  permanent = true
-  regex = "^https?://EXAMPLESUBDOMAIN\\.YOUR_URL(.*)"
-  replacement = "http://grafana.YOUR_URL/?orgId=YOUR_ORG_ID"
-
-[http.routers.EXAMPLESUBDOMAIN-grafana]
-  service = "grafana-grafana-standalone@docker"
-  rule = "Host(`EXAMPLESUBDOMAIN.YOUR_URL`)"
-  middlewares = "EXAMPLESUBDOMAIN-redirect-org-regex@file"

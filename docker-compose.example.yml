@@ -102,11 +102,8 @@ services:
   #t    - "--providers.docker.exposedbydefault=false"
   #t    - "--entrypoints.web.address=:80"
   #t    - "--entrypoints.websecure.address=:443"
-  #t    - "--providers.file.directory=/CustomTraefik/"
-  #t    - "--providers.file.watch=true"
   #t  volumes:
   #t    - /var/run/docker.sock:/var/run/docker.sock
-  #t    - ./traefikConfig/:/CustomTraefik/
   #t  ports:
   #t    - 80:80
   #t    - 443:443
