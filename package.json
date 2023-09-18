@@ -1,6 +1,6 @@
 {
   "name": "screeps-grafana-go_carbon",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "scripts": {
     "setup": "node src/setup/setup.js setup",
     "start": "node src/setup/index.js --grafanaPort=3000",
@@ -26,8 +26,9 @@
   },
   "files": [
     "src",
-    "grafanaConfig.example",
     "dashboards",
+    "grafanaConfig.example",
+    "users.example.json",
     "docker-compose.example.yml",
     "example.env",
     ".dockerignore",
