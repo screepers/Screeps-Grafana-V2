@@ -1,36 +1,36 @@
 {
-    "name": "screeps-grafana-go_carbon",
-    "version": "1.0.0",
-    "scripts": {
-        "setup": "node src/setup/setup.js setup", 
-        "start": "node src/setup/index.js --grafanaPort=3000",
-        "lint": "eslint src/**/*.js && eslint dashboards/**/*.js",
-        "lint:fix": "eslint src/**/* --fix && eslint dashboards/**/*.js --fix",
-        "update-stats-getter": "docker-compose up --detach --build"
-    },
-    "dependencies": {
-        "axios": "^0.27.2",
-        "dotenv": "^16.0.2",
-        "fs-extra": "^11.1.0",
-        "get-port-please": "^3.0.1",
-        "minimist": "^1.2.7",
-        "winston": "^3.8.1"
-    },
-    "devDependencies": {
-        "eslint": "^8.23.1",
-        "eslint-config-airbnb-base": "^15.0.0",
-        "eslint-plugin-import": "^2.26.0"
-    },
-    "bin": {
-        "screeps-grafana-go_carbon": "./bin/setup.js"
-    },
-    "files": [
-        "src",
-        "grafanaConfig.example",
-        "dashboards",
-        "docker-compose.example.yml",
-        "example.env",
-        ".dockerignore",
-        "go-carbon-storage"
-    ]
+  "name": "screeps-grafana-go_carbon",
+  "version": "1.0.1",
+  "scripts": {
+    "setup": "node src/setup/setup.js setup",
+    "start": "node src/setup/index.js --grafanaPort=3000",
+    "lint": "eslint src/**/*.js && eslint dashboards/**/*.js",
+    "lint:fix": "eslint src/**/* --fix && eslint dashboards/**/*.js --fix",
+    "update-stats-getter": "docker-compose up --detach --build"
+  },
+  "dependencies": {
+    "axios": "^0.27.2",
+    "dotenv": "^16.0.2",
+    "fs-extra": "^11.1.0",
+    "get-port-please": "^3.0.1",
+    "minimist": "^1.2.7",
+    "winston": "^3.8.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.23.1",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.26.0"
+  },
+  "bin": {
+    "screeps-grafana-go_carbon": "./bin/setup.js"
+  },
+  "files": [
+    "src",
+    "grafanaConfig.example",
+    "dashboards",
+    "docker-compose.example.yml",
+    "example.env",
+    ".dockerignore",
+    "go-carbon-storage"
+  ]
 }
