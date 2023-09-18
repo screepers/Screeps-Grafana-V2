@@ -4,6 +4,7 @@
   "scripts": {
     "setup": "node src/setup/setup.js setup",
     "start": "node src/setup/index.js --grafanaPort=3000",
+    "start:test": "node src/setup/index.js --grafanaPort=3000 --force",
     "lint": "eslint src/**/*.js && eslint dashboards/**/*.js",
     "lint:fix": "eslint src/**/* --fix && eslint dashboards/**/*.js --fix",
     "update-stats-getter": "docker-compose up --detach --build"
