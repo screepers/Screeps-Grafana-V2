@@ -1,6 +1,6 @@
 {
     "name": "screeps-grafana-go_carbon",
-    "version": "0.1.1",
+    "version": "1.0.0",
     "scripts": {
         "setup": "node src/setup/setup.js setup", 
         "start": "node src/setup/index.js --grafanaPort=3000",
