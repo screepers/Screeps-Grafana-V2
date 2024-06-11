@@ -37,7 +37,8 @@ B. Private:
 ```json
 {
 "prefix": "a.b.c",
-"username": "W1N1",
+"username": "EMAIL",
+"replaceName": "USERNAME HERE",
 "type": "private",
 "shards": ["screeps"],
 "password": "password",
@@ -48,11 +49,12 @@ If the private server is not hosted on localhost, add the host to the user:
 
 ```json
 {
-"username": "W1N1",
+"username": "EMAIL",
+"replaceName": "USERNAME",
 "type": "private",
 "shards": ["screeps"],
 "password": "password",
-"host": "123.456.789",
+"host": "192.168.1.10",
 }
 ```
 
@@ -77,12 +79,10 @@ Update all .example files and/or folders to match your needs. This step is not r
 
 * `--force`: force the non .example config files to be overwritten.
 * `--debug`: listen to setup Docker logs
-* `--traefik`: Add traefik labels to the docker-compose.yml file, reverse proxy for docker containers.
 * `--username`: overwrite the username for the Grafana admin user
 * `--password`: overwrite the password for the Grafana admin user
 * `--defaultRetention`: overwrite the default retention for the default retention polic of all not regex'd retention paths.
 * `--enableAnonymousAccess`: enable anonymous access to Grafana
-* `--traefikHost`: use only traefik forwarding
 
 #### Network
 

@@ -1,56 +1,17 @@
 [
   {
-    "username": "W1N1",
-    "type": "private",
-    "shards": ["screeps"],
-    "password": "password"
+    "username": "YourUsernameHere",
+    "type": "mmo",
+    "shards": ["shard<SHARDNUMBER>"],
+    "password": "YourPasswordHere"
   },
   {
-    "username": "W6N1",
+    "username": "YourEmailHere",
+    "replaceName": "YourUsernameHere",
+    "host": "localhost",
+    "port": 21025,
     "type": "private",
-    "shards": ["screeps"],
-    "password": "password"
-  },
-  {
-    "username": "W2N5",
-    "type": "private",
-    "shards": ["screeps"],
-    "password": "password"
-  },
-  {
-    "username": "W5N8",
-    "type": "private",
-    "shards": ["screeps"],
-    "password": "password"
-  },
-  {
-    "username": "W7N3",
-    "type": "private",
-    "shards": ["screeps"],
-    "password": "password"
-  },
-  {
-    "username": "W9N9",
-    "type": "private",
-    "shards": ["screeps"],
-    "password": "password"
-  },
-  {
-    "username": "W3N9",
-    "type": "private",
-    "shards": ["screeps"],
-    "password": "password"
-  },
-  {
-    "username": "W8N6",
-    "type": "private",
-    "shards": ["screeps"],
-    "password": "password"
-  },
-  {
-    "username": "W3N3",
-    "type": "private",
-    "shards": ["screeps"],
-    "password": "password"
+    "shards": ["<SHARD NAME>"],
+    "password": "YourPasswordHere"
   }
 ]

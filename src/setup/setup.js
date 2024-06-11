@@ -31,7 +31,7 @@ function UpdateEnvFile() {
   let exampleEnvText = fs.readFileSync(exampleEnvFilePath, 'utf8');
   exampleEnvText = exampleEnvText
     .replace('GRAFANA_PORT=3000', `GRAFANA_PORT=${grafanaPort}`)
-    .replace('COMPOSE_PROJECT_NAME=screeps-grafana', `COMPOSE_PROJECT_NAME=screeps-grafana-${!argv.traefik ? grafanaPort : 'standalone'}`)
+    .replace('COMPOSE_PROJECT_NAME=screeps-grafana', `COMPOSE_PROJECT_NAME=screeps-grafana-3000`)
     .replace('COMPOSE_FILE=./docker-compose.yml', `COMPOSE_FILE=${join(__dirname, '../../docker-compose.yml')}`);
   if (serverPort) exampleEnvText = exampleEnvText.replace('SERVER_PORT=21025', `SERVER_PORT=${serverPort}`);
 
@@ -61,18 +61,7 @@ async function UpdateDockerComposeFile() {
   }
   if (argv.includePushStatusApi) exampleDockerComposeText = exampleDockerComposeText.replace('INCLUDE_PUSH_STATUS_API=false', `INCLUDE_PUSH_STATUS_API=true${regexEscape}    ports:${regexEscape}        - ${port}:${port}`);
   if (argv.prefix) exampleDockerComposeText = exampleDockerComposeText.replace('PREFIX=', `PREFIX=${argv.prefix}`);
-  if (argv.traefik) {
-    exampleDockerComposeText = exampleDockerComposeText.replace(/#t/g, '');
-    exampleDockerComposeText = exampleDockerComposeText.replace(/grafana.localhost/g, argv.grafanaDomain);
-  }
-  if (argv.traefikHost) {
-    exampleDockerComposeText = exampleDockerComposeText.replace('#t  labels:', '  labels:');
-    exampleDockerComposeText = exampleDockerComposeText.replace('#t    - "traefik.enable=true"', '    - "traefik.enable=true"');
-    exampleDockerComposeText = exampleDockerComposeText.replace('#t    - "traefik.http.routers.grafana.rule=Host(`grafana.localhost`)"', '    - "traefik.http.routers.grafana.rule=Host(`grafana.localhost`)"');
-    exampleDockerComposeText = exampleDockerComposeText.replace('#t    - "traefik.http.services.grafana.loadbalancer.server.port=3000"', `    - "traefik.http.services.grafana.loadbalancer.server.port=${grafanaPort}"`);
-    exampleDockerComposeText = exampleDockerComposeText.replace(/#t#h/g, '');
-    exampleDockerComposeText = exampleDockerComposeText.replace(/grafana.localhost/g, argv.grafanaDomain);
-  }
+
 
   fs.writeFileSync(dockerComposeFile, exampleDockerComposeText);
   console.log('Docker-compose file created');
@@ -109,12 +98,16 @@ function UpdateGrafanaConfigFolder() {
   grafanaIniText = grafanaIniText.replace(createRegexWithEscape('enable anonymous access\r\nenabled = (.*)'), `enable anonymous access${regexEscape}enabled = ${enableAnonymousAccess}`);
   fs.writeFileSync(grafanaIniFile, grafanaIniText);
 
+  // This can just be set manually in the config folder.
+  /*
   const storageSchemasFile = join(grafanaConfigFolder, './go-carbon/storage-schemas.conf');
   let storageSchemasText = fs.readFileSync(storageSchemasFile, 'utf8');
   const { defaultRetention } = argv;
 
   if (defaultRetention) storageSchemasText = storageSchemasText.replace(createRegexWithEscape('pattern = .*\r\nretentions = (.*)'), `pattern = .*${regexEscape}retentions = ${defaultRetention}`);
   fs.writeFileSync(storageSchemasFile, storageSchemasText);
+
+  */
 
   console.log('Grafana config folder created');
 }
@@ -143,9 +136,7 @@ async function Setup(mArgv) {
   argv = mArgv || {};
   if (argv.grafanaPort) grafanaPort = argv.grafanaPort;
   else {
-    grafanaPort = !argv.traefik
-      ? await getPort({ portRange: [3000, 4000] })
-      : 3000;
+    grafanaPort = 3000
   }
 
   argv.grafanaPort = grafanaPort;
