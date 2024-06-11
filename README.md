@@ -24,11 +24,12 @@ A. MMO:
 
 ```json
 {
-"prefix": "a.b.c",
-"username": "PandaMaster",
-"type": "mmo",
-"shards": ["shard0"],
-"token": "TOKEN_FOR_THIS_USER!",
+    # Prefix is entirely optional
+    "prefix": "a.b.c",
+    "username": "PandaMaster",
+    "type": "mmo",
+    "shards": ["shard0"],
+    "token": "TOKEN_FOR_THIS_USER!",
 }
 ```
 
@@ -36,12 +37,15 @@ B. Private:
 
 ```json
 {
-"prefix": "a.b.c",
-"username": "EMAIL",
-"replaceName": "USERNAME HERE",
-"type": "private",
-"shards": ["screeps"],
-"password": "password",
+    # Prefix is entirely optional
+    "prefix": "a.b.c",
+    "username": "EMAIL",
+    # If your email has a period in it, grafana displays it incorrectly
+    # Its reccomended to change this to the username you set for MMO.
+    "replaceName": "USERNAME HERE",
+    "type": "private",
+    "shards": ["screeps"],
+    "password": "password",
 }
 ```
 
@@ -49,12 +53,12 @@ If the private server is not hosted on localhost, add the host to the user:
 
 ```json
 {
-"username": "EMAIL",
-"replaceName": "USERNAME",
-"type": "private",
-"shards": ["screeps"],
-"password": "password",
-"host": "192.168.1.10",
+    "username": "EMAIL",
+    "replaceName": "USERNAME",
+    "type": "private",
+    "shards": ["screeps"],
+    "password": "password",
+    "host": "192.168.1.10",
 }
 ```
 
@@ -62,12 +66,12 @@ If the segment of the stats is not memory, add it to the user:
 
 ```json
 {
-"username": "W1N1",
-"type": "private",
-"shards": ["screeps"],
-"password": "password",
-"host": "123.456.789",
-"segment": 0,
+    "username": "W1N1",
+    "type": "private",
+    "shards": ["screeps"],
+    "password": "password",
+    "host": "123.456.789",
+    "segment": 0,
 }
 ```
 
@@ -81,7 +85,6 @@ Update all .example files and/or folders to match your needs. This step is not r
 * `--debug`: listen to setup Docker logs
 * `--username`: overwrite the username for the Grafana admin user
 * `--password`: overwrite the password for the Grafana admin user
-* `--defaultRetention`: overwrite the default retention for the default retention polic of all not regex'd retention paths.
 * `--enableAnonymousAccess`: enable anonymous access to Grafana
 
 #### Network
@@ -99,8 +102,7 @@ Update all .example files and/or folders to match your needs. This step is not r
 ## Usage
 
 * `npm run setup`: to execute setup only
-* `npm run start:standalone`: to configure and start it
-* `npm run start:standalone-traefik` to confgiure with traefik and start it
+* `npm run start`: to configure and start it
 * For other run commands like eslint, check out package.json scripts object.
 
 Go to [localhost:3000](http://localhost:3000) (if you used port 3000) and login with `admin` and `password` (or your custom set login info).
