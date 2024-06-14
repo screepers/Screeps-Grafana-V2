@@ -2,15 +2,11 @@ version: "3.5"
 
 volumes:
   grafana_data:
-  go-carbon_data:
+  graphite_data:
 
 networks:
-  internal:
+  stats:
     driver: bridge
-  external:
-    driver: bridge
-  #t#htraefik-net:
-  #t#h  external: true
 
 x-logging: &default-logging
   driver: "local"
@@ -19,53 +15,15 @@ x-logging: &default-logging
     max-file: "5"
 
 services:
-  stats-getter:
-    build:
-      context: .
-      dockerfile: ./src/pushStats/Dockerfile
+  graphite:
+    image: graphiteapp/graphite-statsd
     volumes:
-      - ./logs/statsGetter:/app/logs
-    depends_on:
-      - carbon-relay-ng
-    environment:
-      - PREFIX=
-      - SERVER_PORT=21025
-      - INCLUDE_PUSH_STATUS_API=false
-  carbon-relay-ng:
-    image: grafana/carbon-relay-ng
-    depends_on:
-      - go-carbon
-    volumes:
-      - ./grafanaConfig/carbon-relay-ng:/conf
-    ports:
-      - 127.0.0.1:2003:2003
+      - ./logs/graphite:/var/log
+      - ./grafanaConfig/graphite:/opt/graphite/conf
+      - graphite_data:/opt/graphite/storage
     networks:
-      - internal
-    logging: *default-logging
-  go-carbon:
-    image: ghcr.io/go-graphite/go-carbon
-    volumes:
-      - ./grafanaConfig/go-carbon/go-carbon.conf:/etc/go-carbon/go-carbon.conf
-      - ./grafanaConfig/go-carbon:/etc/go-carbon/
-      - ./go-carbon-storage:/var/lib/graphite/whisper
-      #- ./logs/goCarbon:/var/log/go-carbon
-    networks:
-      - internal
-    logging: *default-logging
-  carbon-api:
-    image: pieterbrandsen/carbonapi-0.15.6
-    volumes:
-      - ./grafanaConfig/carbonapi/carbonapi.yml:/etc/carbonapi.yml
-      - ./grafanaConfig/carbonapi:/conf:ro
-      - ./logs/carbonApi:/log
-    depends_on:
-      - go-carbon
-    networks:
-      - internal
-      - external
-    logging: *default-logging
+      - stats
   grafana:
-    #t  container_name: grafana
     image: grafana/grafana-oss:9.3.6-ubuntu
     volumes:
       - grafana_data:/var/lib/grafana
@@ -73,39 +31,24 @@ services:
       - ./logs/grafana:/var/log/grafana
     ports:
       - 3000:3000
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     healthcheck:
       test: "curl -fsSL -o /dev/null http://localhost:3000/login"
       interval: 10s
       timeout: 5s
       retries: 3
     networks:
-      - external
-      #t#h- traefik-net
-    logging: *default-logging
-  #t  labels:
-  #t    - "traefik.enable=true"
-  #t    - "traefik.http.routers.grafana.rule=Host(`grafana.localhost`)"
-  #t#h    - "traefik.docker.network=traefik-net"
-  #t    - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-  #t#h    - "traefik.http.routers.grafana.entrypoints=websecure"
-  #t#h    - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
-  #ttraefik:
-  #t  image: traefik:v2.5.4
-  #t  container_name: traefik
-  #t  command:
-  #t    - "--log.level=DEBUG"
-  #t    - "--api.insecure=true"
-  #t    - "--api.dashboard=true"
-  #t    - "--providers.docker=true"
-  #t    - "--providers.docker.exposedbydefault=false"
-  #t    - "--entrypoints.web.address=:80"
-  #t    - "--entrypoints.websecure.address=:443"
-  #t  volumes:
-  #t    - /var/run/docker.sock:/var/run/docker.sock
-  #t  ports:
-  #t    - 80:80
-  #t    - 443:443
-  #t    - 8080:8080
-  #t  logging: *default-logging
+      - stats
+  stats-getter:
+    build:
+      context: .
+      dockerfile: ./src/pushStats/Dockerfile
+    volumes:
+      - ./logs/statsGetter:/app/logs
+    depends_on:
+      - graphite
+    environment:
+      - PREFIX=
+      - SERVER_PORT=21025
+      - INCLUDE_PUSH_STATUS_API=false
+    networks:
+      - stats
