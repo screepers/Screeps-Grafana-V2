@@ -44,6 +44,7 @@ services:
       dockerfile: ./src/pushStats/Dockerfile
     volumes:
       - ./logs/statsGetter:/app/logs
+      - ./users.json:/app/users.json
     depends_on:
       - graphite
     environment:

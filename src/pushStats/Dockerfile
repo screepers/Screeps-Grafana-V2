@@ -6,7 +6,6 @@ ENV NODE_ENV=production
 
 COPY ./src/pushStats .
 
-COPY ./users.json ./users.json
-RUN npm install
+RUN npm clean-install
 
 CMD ["node", "index.js"]

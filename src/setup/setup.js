@@ -69,18 +69,6 @@ async function UpdateDockerComposeFile() {
   logger.info('Docker-compose file created');
 }
 
-function UpdateUsersFile() {
-  const usersFile = join(__dirname, '../../users.json');
-  if (fs.existsSync(usersFile) && !argv.force) {
-    return logger.warn('Users file already exists, use --force to overwrite it');
-  }
-
-  const exampleUsersFilePath = join(__dirname, '../../users.example.json');
-  const exampleUsersText = fs.readFileSync(exampleUsersFilePath, 'utf8');
-  fs.writeFileSync(usersFile, exampleUsersText);
-  logger.info('Users file created');
-}
-
 function UpdateGrafanaConfigFolder() {
   const configDirPath = join(__dirname, '../../grafanaConfig');
   if (fs.existsSync(configDirPath) && !argv.force) {
@@ -148,7 +136,12 @@ async function Setup(cli) {
   argv = cli.args;
   logger = cli.logger;
 
-  UpdateUsersFile();
+  const usersFile = join(__dirname, '../../users.json');
+  if (!fs.existsSync(usersFile)) {
+    logger.error('missing users.json file');
+    process.exit(-1);
+  }
+
   UpdateEnvFile();
   await UpdateDockerComposeFile();
   UpdateGrafanaConfigFolder();
@@ -161,7 +154,6 @@ module.exports.commands = async function Commands(grafanaApiUrl) {
 
   const commands = [
     { command: `docker compose down ${argv.removeVolumes ? '--volumes' : ''} --remove-orphans`, name: 'docker-compose down' },
-    { command: 'docker compose build --no-cache', name: 'docker-compose build' },
     { command: 'docker compose up -d', name: 'docker-compose up' },
   ];
 

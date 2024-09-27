@@ -12,7 +12,8 @@
 
 ## Setup
 
-1. Update all .example files and/or folders to match your needs. This step is not required if you are using the default setup.
+1. Edit `example.env` and `docker-compose.example.yml` to match your needs. This step is not required if you are using the default setup.
+2. Copy `users.example.json` to `users.json` and edit it according to [User Setup](#User-Setup).
 2. Add your own Grafana variables in `grafanaConfig/.env.grafana`. This file will be updated after a volume reset.
 
 ### User Setup
