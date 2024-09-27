@@ -12,8 +12,27 @@
 
 ## Setup
 
-1. Update all .example files and/or folders to match your needs. This step is not required if you are using the default setup.
-2. Add your own Grafana variables in `grafanaConfig/.env.grafana`. This file will be updated after a volume reset.
+1. Edit `example.env` and `docker-compose.example.yml` to match your needs. This step is not required if you are using the default setup.
+2. Copy `users.example.json` to `users.json` and edit it according to [User Setup](#User-Setup).
+3. The configuration files for both Grafana and Graphite are in `config/grafana` and `config/graphite` respectively.
+4. If you have a dashboard you want to auto-add, you can drop their JSON files into `config/grafana/provisioning/dashboards`
+and they'll be auto-added to the instance.
+
+## Usage
+
+* `npm run start`: start the containers
+* `npm run logs`: check the container's logs
+* `npm run stop`: stop the containers
+* `npm run reset`: remove the containers
+* `npm run reset:hard`: remove the containers and their volumes
+* `npm run rebuild`: rebuild the pushStats container and restart it; needed if you make changes to its code.
+
+See the scripts section in the package.json file.
+
+Go to [localhost:3000](http://localhost:3000) (if you used port 3000) and login with `admin` and `password` (or your custom set login info).
+
+Its possible to use https for your grafana instance, check out this [tutorial](https://www.turbogeek.co.uk/grafana-how-to-configure-ssl-https-in-grafana/) for example on how to do this, enough info online about it. I dont support this (yet)
+
 
 ### User Setup
 
