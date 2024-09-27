@@ -7,12 +7,9 @@ let argv;
 /** @type {import('winston').Logger} */
 let logger;
 
-function getPortMock() {
-  return 3000;
-}
 const nodeVersion = process.versions.node;
 const nodeVersionMajor = Number(nodeVersion.split('.')[0]);
-const { getPort } = nodeVersionMajor >= 14 ? require('get-port-please') : { getPort: getPortMock };
+const { getPort } = nodeVersionMajor >= 14 ? require('get-port-please') : { getPort: async () => 3000 };
 
 const isWindows = process.platform === 'win32';
 const regexEscape = isWindows ? '\r\n' : '\n';
@@ -31,7 +28,7 @@ function UpdateEnvFile() {
   let contents = fs.readFileSync(exampleEnvFilePath, 'utf8');
   contents = contents
     .replace('GRAFANA_PORT=3000', `GRAFANA_PORT=${argv.grafanaPort}`)
-    .replace('COMPOSE_PROJECT_NAME=screeps-grafana', 'COMPOSE_PROJECT_NAME=screeps-grafana-3000')
+    .replace('COMPOSE_PROJECT_NAME=screeps-grafana', `COMPOSE_PROJECT_NAME=screeps-grafana-${argv.grafanaPort}`)
     .replace('COMPOSE_FILE=./docker-compose.yml', `COMPOSE_FILE=${join(__dirname, '../../docker-compose.yml')}`);
   if (argv.serverPort) {
     contents = contents.replace('SERVER_PORT=21025', `SERVER_PORT=${argv.serverPort}`);
@@ -155,7 +152,7 @@ async function Setup(cli) {
   argv = cli.args;
   logger = cli.logger;
 
-  argv.grafanaPort = argv.grafanaPort ?? 3000;
+  argv.grafanaPort = argv.grafanaPort ?? await getPort({ portRange: [3000, 4000] });
 
   UpdateUsersFile();
   UpdateEnvFile();
