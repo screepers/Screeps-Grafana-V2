@@ -30,7 +30,6 @@
   },
   "files": [
     "src",
-    "dashboards",
     "config",
     "users.example.json",
     "docker-compose.yml",
