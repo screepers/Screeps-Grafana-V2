@@ -7,10 +7,6 @@ let argv;
 /** @type {import('winston').Logger} */
 let logger;
 
-const nodeVersion = process.versions.node;
-const nodeVersionMajor = Number(nodeVersion.split('.')[0]);
-const { getPort } = nodeVersionMajor >= 14 ? require('get-port-please') : { getPort: async () => 3000 };
-
 const isWindows = process.platform === 'win32';
 const regexEscape = isWindows ? '\r\n' : '\n';
 
@@ -151,8 +147,6 @@ function resetFolders() {
 async function Setup(cli) {
   argv = cli.args;
   logger = cli.logger;
-
-  argv.grafanaPort = argv.grafanaPort ?? await getPort({ portRange: [3000, 4000] });
 
   UpdateUsersFile();
   UpdateEnvFile();
