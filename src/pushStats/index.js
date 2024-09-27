@@ -12,7 +12,7 @@ import express from 'express';
 import ApiFunc from './apiFunctions.js';
 
 const app = express();
-const port = 10004;
+const pushStatusPort = Number(process.env.PUSH_STATUS_PORT);
 let lastUpload = new Date().getTime();
 
 const users = JSON.parse(fs.readFileSync('users.json'));
@@ -233,9 +233,9 @@ cron.schedule('*/30 * * * * *', async () => {
   });
 });
 
-if (process.env.INCLUDE_PUSH_STATUS_API === 'true') {
-  app.listen(port, () => {
-    console.log(`App listening at http://localhost:${port}`);
+if (pushStatusPort) {
+  app.listen(pushStatusPort, () => {
+    console.log(`App listening at http://localhost:${pushStatusPort}`);
   });
   app.get('/', (req, res) => {
     const diffCompleteMinutes = Math.ceil(

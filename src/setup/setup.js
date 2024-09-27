@@ -57,8 +57,8 @@ async function UpdateDockerComposeFile() {
   }
   if (argv.pushStatusPort) {
     contents = contents.replace(
-      'INCLUDE_PUSH_STATUS_API=false',
-      `INCLUDE_PUSH_STATUS_API=true${regexEscape}    ports:${regexEscape}        - ${argv.pushStatusPort}:${argv.pushStatusPort}`,
+      'PUSH_STATUS_PORT=',
+      `PUSH_STATUS_PORT=${argv.pushStatusPort}${regexEscape}    ports:${regexEscape}        - ${argv.pushStatusPort}:${argv.pushStatusPort}`,
     );
   }
   if (argv.prefix) {
