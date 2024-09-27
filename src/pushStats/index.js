@@ -203,7 +203,6 @@ class ManageStats {
         lastUpload = new Date().getTime();
         resolve(true);
       });
-      // resolve(true);
     });
   }
 
