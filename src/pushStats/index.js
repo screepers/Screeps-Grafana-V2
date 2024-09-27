@@ -86,7 +86,7 @@ class ManageStats {
       }
     });
 
-    console.log(`[${type}] Getting ${getStatsFunctions.length} statistics`)
+    console.log(`[${type}] Getting ${getStatsFunctions.length} statistics`);
 
     await Promise.all(getStatsFunctions);
 
@@ -96,7 +96,7 @@ class ManageStats {
       if (Object.keys(groupedStats).length > 0) {
         if (!await ManageStats.reportStats({ stats: groupedStats })) return console.log('Error while pushing stats');
 
-        console.log(`[${type}] Pushed stats to graphite`)
+        console.log(`[${type}] Pushed stats to graphite`);
 
         return console.log(this.message);
       }
@@ -106,13 +106,11 @@ class ManageStats {
     }
     if (type === 'season') {
       if (Object.keys(groupedStats).length > 0) {
-
         if (!await ManageStats.reportStats({ stats: groupedStats })) return console.log('Error while pushing stats');
 
-        console.log(`[${type}] Pushed stats to graphite`)
+        console.log(`[${type}] Pushed stats to graphite`);
 
         return console.log(this.message);
-
       }
       if (beginningOfMinute) return console.log('No stats to push');
       return undefined;
@@ -126,7 +124,7 @@ class ManageStats {
       try {
         const groupedAdminStatsUsers = {};
         for (const [username, user] of Object.entries(adminUtilsServerStats)) {
-           groupedAdminStatsUsers[username] = user;
+          groupedAdminStatsUsers[username] = user;
         }
 
         adminUtilsServerStats.users = groupedAdminStatsUsers;
@@ -195,7 +193,7 @@ class ManageStats {
 
   static async reportStats(stats) {
     return new Promise((resolve) => {
-      console.log("Writing stats " + JSON.stringify(stats) + " to graphite");
+      console.log(`Writing stats ${JSON.stringify(stats)} to graphite`);
       client.write({ [`${process.env.PREFIX ? `${process.env.PREFIX}.` : ''}screeps`]: stats }, (err) => {
         if (err) {
           console.log(err);
@@ -205,13 +203,13 @@ class ManageStats {
         lastUpload = new Date().getTime();
         resolve(true);
       });
-      //resolve(true);
+      // resolve(true);
     });
   }
 
   pushStats(userinfo, stats, shard) {
     if (Object.keys(stats).length === 0) return;
-    let username = userinfo.replaceName !== undefined ? userinfo.replaceName : userinfo.username;
+    const username = userinfo.replaceName !== undefined ? userinfo.replaceName : userinfo.username;
     this.groupedStats[(userinfo.prefix ? `${userinfo.prefix}.` : '') + username] = { [shard]: stats };
 
     console.log(`Pushing stats for ${(userinfo.prefix ? `${userinfo.prefix}.` : '') + username} in ${shard}`);

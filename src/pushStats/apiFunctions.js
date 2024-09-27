@@ -203,7 +203,7 @@ export default class {
     if (res) {
       console.log(`Got memory from ${info.username} in ${shard} `);
     } else {
-      return undefined
+      return undefined;
     }
 
     const data = await gz(res.data);
