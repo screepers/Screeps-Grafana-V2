@@ -1,5 +1,3 @@
-version: "3.5"
-
 volumes:
   grafana_data:
   graphite_data:
@@ -23,6 +21,7 @@ services:
       - graphite_data:/opt/graphite/storage
     networks:
       - stats
+    logging: *default-logging
   grafana:
     image: grafana/grafana-oss:9.3.6-ubuntu
     volumes:
@@ -38,6 +37,7 @@ services:
       retries: 3
     networks:
       - stats
+    logging: *default-logging
   stats-getter:
     build:
       context: .
@@ -52,3 +52,4 @@ services:
       - INCLUDE_PUSH_STATUS_API=false
     networks:
       - stats
+    logging: *default-logging

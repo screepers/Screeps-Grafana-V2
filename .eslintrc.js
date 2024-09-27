@@ -15,6 +15,7 @@ module.exports = {
         "no-console":"off",
         "import/extensions":"off",
         "no-underscore-dangle":"off",
-        "no-param-reassign": ["error", { "props": false }]
+        "no-param-reassign": ["error", { "props": false }],
+        "no-restricted-syntax": "off",
     }
 }

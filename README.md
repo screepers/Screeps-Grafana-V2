@@ -92,6 +92,7 @@ Update all .example files and/or folders to match your needs. This step is not r
 * `--grafanaDomain`: Overwrite grafana.ini domain
 * `--grafanaPort`: port for Grafana to run on
 * `--relayPort`: port for relay-ng to run on (default: 2003)
+* `--pushStatusPort`: port for the stats-getter push API (default: disabled)
 
 #### Exporting
 
