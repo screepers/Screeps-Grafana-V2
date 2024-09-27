@@ -34,6 +34,16 @@ const logger = createLogger({
 async function main() {
   argv.grafanaPort = argv.grafanaPort ?? await getPort({ portRange: [3000, 4000] });
   argv.serverPort = argv.serverPort ?? 21025;
+  if (argv.pushStatusPort === true) {
+    argv.pushStatusPort = 10004;
+  } else {
+    const port = Number(argv.pushStatusPort);
+    if (!Number.isNaN(port)) {
+      argv.pushStatusPort = port;
+    } else {
+      delete argv.pushStatusPort;
+    }
+  }
 
   const cli = {
     cmd: argv._.shift(),

@@ -49,7 +49,7 @@ services:
     environment:
       - PREFIX=
       - SERVER_PORT=21025
-      - INCLUDE_PUSH_STATUS_API=false
+      - PUSH_STATUS_PORT=
     networks:
       - stats
     logging: *default-logging
