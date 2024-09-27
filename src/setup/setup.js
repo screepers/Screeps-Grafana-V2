@@ -4,7 +4,6 @@ const { join } = require('path');
 const { execSync } = require('child_process');
 
 let argv;
-const port = 10004;
 /** @type {import('winston').Logger} */
 let logger;
 
@@ -18,9 +17,6 @@ const { getPort } = nodeVersionMajor >= 14 ? require('get-port-please') : { getP
 const isWindows = process.platform === 'win32';
 const regexEscape = isWindows ? '\r\n' : '\n';
 
-let grafanaPort;
-let serverPort;
-
 function createRegexWithEscape(string) {
   return new RegExp(string.replace('\r\n', regexEscape));
 }
@@ -32,14 +28,16 @@ function UpdateEnvFile() {
   }
 
   const exampleEnvFilePath = join(__dirname, '../../example.env');
-  let exampleEnvText = fs.readFileSync(exampleEnvFilePath, 'utf8');
-  exampleEnvText = exampleEnvText
-    .replace('GRAFANA_PORT=3000', `GRAFANA_PORT=${grafanaPort}`)
+  let contents = fs.readFileSync(exampleEnvFilePath, 'utf8');
+  contents = contents
+    .replace('GRAFANA_PORT=3000', `GRAFANA_PORT=${argv.grafanaPort}`)
     .replace('COMPOSE_PROJECT_NAME=screeps-grafana', 'COMPOSE_PROJECT_NAME=screeps-grafana-3000')
     .replace('COMPOSE_FILE=./docker-compose.yml', `COMPOSE_FILE=${join(__dirname, '../../docker-compose.yml')}`);
-  if (serverPort) exampleEnvText = exampleEnvText.replace('SERVER_PORT=21025', `SERVER_PORT=${serverPort}`);
+  if (argv.serverPort) {
+    contents = contents.replace('SERVER_PORT=21025', `SERVER_PORT=${argv.serverPort}`);
+  }
 
-  fs.writeFileSync(envFile, exampleEnvText);
+  fs.writeFileSync(envFile, contents);
   logger.info('Env file created');
 }
 
@@ -48,27 +46,33 @@ async function UpdateDockerComposeFile() {
   if (fs.existsSync(dockerComposeFile) && !argv.force) {
     return logger.warn('Docker-compose file already exists, use --force to overwrite it');
   }
-  const { relayPort } = argv;
 
   const exampleDockerComposeFile = join(__dirname, '../../docker-compose.example.yml');
-  let exampleDockerComposeText = fs.readFileSync(exampleDockerComposeFile, 'utf8');
-  exampleDockerComposeText = exampleDockerComposeText
-    .replace('3000:3000', `${grafanaPort}:${grafanaPort}`);
-  exampleDockerComposeText = exampleDockerComposeText.replace('http://localhost:3000/login', `http://localhost:${grafanaPort}/login`);
+  let contents = fs.readFileSync(exampleDockerComposeFile, 'utf8');
+  contents = contents.replace('3000:3000', `${argv.grafanaPort}:${argv.grafanaPort}`);
+  contents = contents.replace('http://localhost:3000/login', `http://localhost:${argv.grafanaPort}/login`);
 
-  if (relayPort) exampleDockerComposeText = exampleDockerComposeText.replace('2003:2003', `${relayPort}:2003`);
-  else {
-    exampleDockerComposeText = exampleDockerComposeText.replace(createRegexWithEscape('ports:\r\n      - 2003:2003'), '');
+  if (argv.relayPort) {
+    contents = contents.replace('2003:2003', `${argv.relayPort}:2003`);
+  } else {
+    contents = contents.replace(createRegexWithEscape('ports:\r\n      - 2003:2003'), '');
   }
-  if (serverPort) {
-    exampleDockerComposeText = exampleDockerComposeText
-      .replace('http://localhost:21025/web', `http://localhost:${serverPort}/web`)
-      .replace('SERVER_PORT: 21025', `SERVER_PORT: ${serverPort}`);
+  if (argv.serverPort) {
+    contents = contents
+      .replace('http://localhost:21025/web', `http://localhost:${argv.serverPort}/web`)
+      .replace('SERVER_PORT: 21025', `SERVER_PORT: ${argv.serverPort}`);
   }
-  if (argv.includePushStatusApi) exampleDockerComposeText = exampleDockerComposeText.replace('INCLUDE_PUSH_STATUS_API=false', `INCLUDE_PUSH_STATUS_API=true${regexEscape}    ports:${regexEscape}        - ${port}:${port}`);
-  if (argv.prefix) exampleDockerComposeText = exampleDockerComposeText.replace('PREFIX=', `PREFIX=${argv.prefix}`);
+  if (argv.pushStatusPort) {
+    contents = contents.replace(
+      'INCLUDE_PUSH_STATUS_API=false',
+      `INCLUDE_PUSH_STATUS_API=true${regexEscape}    ports:${regexEscape}        - ${argv.pushStatusPort}:${argv.pushStatusPort}`,
+    );
+  }
+  if (argv.prefix) {
+    contents = contents.replace('PREFIX=', `PREFIX=${argv.prefix}`);
+  }
 
-  fs.writeFileSync(dockerComposeFile, exampleDockerComposeText);
+  fs.writeFileSync(dockerComposeFile, contents);
   logger.info('Docker-compose file created');
 }
 
@@ -85,26 +89,28 @@ function UpdateUsersFile() {
 }
 
 function UpdateGrafanaConfigFolder() {
-  const grafanaConfigFolder = join(__dirname, '../../grafanaConfig');
-  if (fs.existsSync(grafanaConfigFolder) && !argv.force) {
+  const configDirPath = join(__dirname, '../../grafanaConfig');
+  if (fs.existsSync(configDirPath) && !argv.force) {
     return logger.warn('Grafana config folder already exists, use --force to overwrite it');
   }
 
-  fse.copySync(join(__dirname, '../../grafanaConfig.example'), grafanaConfigFolder);
-  const grafanaIniFile = join(grafanaConfigFolder, './grafana/grafana.ini');
+  fse.copySync(join(__dirname, '../../grafanaConfig.example'), configDirPath);
+  const grafanaIniFile = join(configDirPath, './grafana/grafana.ini');
   let grafanaIniText = fs.readFileSync(grafanaIniFile, 'utf8');
 
-  const { username } = argv;
-  const { password } = argv;
-  const { enableAnonymousAccess } = argv;
-  if (username) grafanaIniText = grafanaIniText.replace(/admin_user = (.*)/, `admin_user = ${username}`);
-  if (password) grafanaIniText = grafanaIniText.replace(/admin_password = (.*)/, `admin_password = ${password}`);
+  if (argv.username) grafanaIniText = grafanaIniText.replace(/admin_user = (.*)/, `admin_user = ${argv.username}`);
+  if (argv.password) grafanaIniText = grafanaIniText.replace(/admin_password = (.*)/, `admin_password = ${argv.password}`);
   if (argv.grafanaDomain) {
     grafanaIniText = grafanaIniText.replace('domain = localhost', `domain = ${argv.grafanaDomain}`);
     grafanaIniText = grafanaIniText.replace('from_address = admin@localhost', `from_address = admin@${argv.grafanaDomain}`);
   }
-  if (grafanaPort) grafanaIniText = grafanaIniText.replace('http_port = 3000', `http_port = ${grafanaPort}`);
-  grafanaIniText = grafanaIniText.replace(createRegexWithEscape('enable anonymous access\r\nenabled = (.*)'), `enable anonymous access${regexEscape}enabled = ${enableAnonymousAccess}`);
+  if (argv.grafanaPort) {
+    grafanaIniText = grafanaIniText.replace('http_port = 3000', `http_port = ${argv.grafanaPort}`);
+  }
+  grafanaIniText = grafanaIniText.replace(
+    createRegexWithEscape('enable anonymous access\r\nenabled = (.*)'),
+    `enable anonymous access${regexEscape}enabled = ${argv.enableAnonymousAccess ? 'true' : 'false'}`,
+  );
   fs.writeFileSync(grafanaIniFile, grafanaIniText);
 
   // This can just be set manually in the config folder.
@@ -113,9 +119,13 @@ function UpdateGrafanaConfigFolder() {
   let storageSchemasText = fs.readFileSync(storageSchemasFile, 'utf8');
   const { defaultRetention } = argv;
 
-  if (defaultRetention) storageSchemasText = storageSchemasText.replace(createRegexWithEscape('pattern = .*\r\nretentions = (.*)'), `pattern = .*${regexEscape}retentions = ${defaultRetention}`);
+  if (defaultRetention) {
+    storageSchemasText = storageSchemasText.replace(
+      createRegexWithEscape('pattern = .*\r\nretentions = (.*)'),
+      `pattern = .*${regexEscape}retentions = ${defaultRetention}`,
+    );
+  }
   fs.writeFileSync(storageSchemasFile, storageSchemasText);
-
   */
 
   logger.info('Grafana config folder created');
@@ -145,10 +155,7 @@ async function Setup(cli) {
   argv = cli.args;
   logger = cli.logger;
 
-  grafanaPort = argv.grafanaPort ?? 3000;
-
-  argv.grafanaPort = grafanaPort;
-  serverPort = argv.serverPort;
+  argv.grafanaPort = argv.grafanaPort ?? 3000;
 
   UpdateUsersFile();
   UpdateEnvFile();
@@ -159,7 +166,7 @@ async function Setup(cli) {
 module.exports = Setup;
 
 module.exports.commands = async function Commands(grafanaApiUrl) {
-  logger.info(`Grafana API URL: ${grafanaApiUrl}, serverPort: ${serverPort}`);
+  logger.info(`Grafana API URL: ${grafanaApiUrl}, serverPort: ${argv.serverPort}`);
 
   const commands = [
     { command: `docker compose down ${argv.removeVolumes ? '--volumes' : ''} --remove-orphans`, name: 'docker-compose down' },
