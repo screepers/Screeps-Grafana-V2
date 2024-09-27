@@ -1,5 +1,3 @@
-version: "3.5"
-
 volumes:
   grafana_data:
   graphite_data:
