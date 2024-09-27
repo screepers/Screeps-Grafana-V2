@@ -5,6 +5,8 @@ const { execSync } = require('child_process');
 
 let argv;
 const port = 10004;
+/** @type {import('winston').Logger} */
+let logger;
 
 function getPortMock() {
   return 3000;
@@ -25,23 +27,27 @@ function createRegexWithEscape(string) {
 
 function UpdateEnvFile() {
   const envFile = join(__dirname, '../../.env');
-  if (fs.existsSync(envFile) && !argv.force) return console.log('Env file already exists, use --force to overwrite it');
+  if (fs.existsSync(envFile) && !argv.force) {
+    return logger.warn('Env file already exists, use --force to overwrite it');
+  }
 
   const exampleEnvFilePath = join(__dirname, '../../example.env');
   let exampleEnvText = fs.readFileSync(exampleEnvFilePath, 'utf8');
   exampleEnvText = exampleEnvText
     .replace('GRAFANA_PORT=3000', `GRAFANA_PORT=${grafanaPort}`)
-    .replace('COMPOSE_PROJECT_NAME=screeps-grafana', `COMPOSE_PROJECT_NAME=screeps-grafana-3000`)
+    .replace('COMPOSE_PROJECT_NAME=screeps-grafana', 'COMPOSE_PROJECT_NAME=screeps-grafana-3000')
     .replace('COMPOSE_FILE=./docker-compose.yml', `COMPOSE_FILE=${join(__dirname, '../../docker-compose.yml')}`);
   if (serverPort) exampleEnvText = exampleEnvText.replace('SERVER_PORT=21025', `SERVER_PORT=${serverPort}`);
 
   fs.writeFileSync(envFile, exampleEnvText);
-  console.log('Env file created');
+  logger.info('Env file created');
 }
 
 async function UpdateDockerComposeFile() {
   const dockerComposeFile = join(__dirname, '../../docker-compose.yml');
-  if (fs.existsSync(dockerComposeFile) && !argv.force) return console.log('Docker-compose file already exists, use --force to overwrite it');
+  if (fs.existsSync(dockerComposeFile) && !argv.force) {
+    return logger.warn('Docker-compose file already exists, use --force to overwrite it');
+  }
   const { relayPort } = argv;
 
   const exampleDockerComposeFile = join(__dirname, '../../docker-compose.example.yml');
@@ -62,24 +68,27 @@ async function UpdateDockerComposeFile() {
   if (argv.includePushStatusApi) exampleDockerComposeText = exampleDockerComposeText.replace('INCLUDE_PUSH_STATUS_API=false', `INCLUDE_PUSH_STATUS_API=true${regexEscape}    ports:${regexEscape}        - ${port}:${port}`);
   if (argv.prefix) exampleDockerComposeText = exampleDockerComposeText.replace('PREFIX=', `PREFIX=${argv.prefix}`);
 
-
   fs.writeFileSync(dockerComposeFile, exampleDockerComposeText);
-  console.log('Docker-compose file created');
+  logger.info('Docker-compose file created');
 }
 
 function UpdateUsersFile() {
   const usersFile = join(__dirname, '../../users.json');
-  if (fs.existsSync(usersFile) && !argv.force) return console.log('Users file already exists, use --force to overwrite it');
+  if (fs.existsSync(usersFile) && !argv.force) {
+    return logger.warn('Users file already exists, use --force to overwrite it');
+  }
 
   const exampleUsersFilePath = join(__dirname, '../../users.example.json');
   const exampleUsersText = fs.readFileSync(exampleUsersFilePath, 'utf8');
   fs.writeFileSync(usersFile, exampleUsersText);
-  console.log('Users file created');
+  logger.info('Users file created');
 }
 
 function UpdateGrafanaConfigFolder() {
   const grafanaConfigFolder = join(__dirname, '../../grafanaConfig');
-  if (fs.existsSync(grafanaConfigFolder) && !argv.force) return console.log('Grafana config folder already exists, use --force to overwrite it');
+  if (fs.existsSync(grafanaConfigFolder) && !argv.force) {
+    return logger.warn('Grafana config folder already exists, use --force to overwrite it');
+  }
 
   fse.copySync(join(__dirname, '../../grafanaConfig.example'), grafanaConfigFolder);
   const grafanaIniFile = join(grafanaConfigFolder, './grafana/grafana.ini');
@@ -109,7 +118,7 @@ function UpdateGrafanaConfigFolder() {
 
   */
 
-  console.log('Grafana config folder created');
+  logger.info('Grafana config folder created');
 }
 
 function resetFolders() {
@@ -132,12 +141,11 @@ function resetFolders() {
   if (!logsExist) fs.mkdirSync(logsPath, { recursive: true });
 }
 
-async function Setup(mArgv) {
-  argv = mArgv || {};
-  if (argv.grafanaPort) grafanaPort = argv.grafanaPort;
-  else {
-    grafanaPort = 3000
-  }
+async function Setup(cli) {
+  argv = cli.args;
+  logger = cli.logger;
+
+  grafanaPort = argv.grafanaPort ?? 3000;
 
   argv.grafanaPort = grafanaPort;
   serverPort = argv.serverPort;
@@ -148,13 +156,10 @@ async function Setup(mArgv) {
   UpdateGrafanaConfigFolder();
 }
 
-if (process.argv[2] === 'setup') Setup();
-
 module.exports = Setup;
 
 module.exports.commands = async function Commands(grafanaApiUrl) {
-  console.log(`\r\nGrafana API URL: ${grafanaApiUrl}${serverPort ? `, serverPort: ${serverPort}`
-    : ''}`);
+  logger.info(`Grafana API URL: ${grafanaApiUrl}, serverPort: ${serverPort}`);
 
   const commands = [
     { command: `docker compose down ${argv.removeVolumes ? '--volumes' : ''} --remove-orphans`, name: 'docker-compose down' },
@@ -162,16 +167,16 @@ module.exports.commands = async function Commands(grafanaApiUrl) {
     { command: 'docker compose up -d', name: 'docker-compose up' },
   ];
 
-  console.log('\r\nExecuting start commands:');
+  logger.info('Executing start commands:');
   for (let i = 0; i < commands.length; i += 1) {
     const commandInfo = commands[i];
     try {
-      console.log(`Running command ${commandInfo.name}`);
+      logger.info(`Running command ${commandInfo.name}`);
       execSync(commandInfo.command, { stdio: argv.debug ? 'inherit' : 'ignore' });
       if (commandInfo.name.startsWith('docker-compose down')) resetFolders();
     } catch (error) {
-      console.log(`Command ${commandInfo.name} errored`, error);
-      console.log('Stopping setup');
+      logger.error(`Command ${commandInfo.name} errored`, error);
+      logger.error('Stopping setup');
       process.exit(1);
     }
   }
