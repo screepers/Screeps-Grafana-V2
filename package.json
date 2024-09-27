@@ -31,8 +31,8 @@
     "dashboards",
     "grafanaConfig.example",
     "users.example.json",
-    "docker-compose.example.yml",
-    "example.env",
-    ".dockerignore",
+    "docker-compose.yml",
+    "env.example",
+    ".dockerignore"
   ]
 }

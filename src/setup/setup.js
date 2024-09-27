@@ -14,54 +14,6 @@ function createRegexWithEscape(string) {
   return new RegExp(string.replace('\r\n', regexEscape));
 }
 
-function UpdateEnvFile() {
-  const envFile = join(__dirname, '../../.env');
-  if (fs.existsSync(envFile) && !argv.force) {
-    return logger.warn('Env file already exists, use --force to overwrite it');
-  }
-
-  const exampleEnvFilePath = join(__dirname, '../../example.env');
-  let contents = fs.readFileSync(exampleEnvFilePath, 'utf8');
-  contents = contents
-    .replace('GRAFANA_PORT=3000', `GRAFANA_PORT=${argv.grafanaPort}`)
-    .replace('COMPOSE_PROJECT_NAME=screeps-grafana', `COMPOSE_PROJECT_NAME=screeps-grafana-${argv.grafanaPort}`)
-    .replace('COMPOSE_FILE=./docker-compose.yml', `COMPOSE_FILE=${join(__dirname, '../../docker-compose.yml')}`);
-  if (argv.serverPort) {
-    contents = contents.replace('SERVER_PORT=21025', `SERVER_PORT=${argv.serverPort}`);
-  }
-
-  fs.writeFileSync(envFile, contents);
-  logger.info('Env file created');
-}
-
-async function UpdateDockerComposeFile() {
-  const dockerComposeFile = join(__dirname, '../../docker-compose.yml');
-  if (fs.existsSync(dockerComposeFile) && !argv.force) {
-    return logger.warn('Docker-compose file already exists, use --force to overwrite it');
-  }
-
-  const exampleDockerComposeFile = join(__dirname, '../../docker-compose.example.yml');
-  let contents = fs.readFileSync(exampleDockerComposeFile, 'utf8');
-  contents = contents.replace('3000:3000', `${argv.grafanaPort}:${argv.grafanaPort}`);
-  contents = contents.replace('http://localhost:3000/login', `http://localhost:${argv.grafanaPort}/login`);
-
-  if (argv.serverPort) {
-    contents = contents.replace('SERVER_PORT: 21025', `SERVER_PORT: ${argv.serverPort}`);
-  }
-  if (argv.pushStatusPort) {
-    contents = contents.replace(
-      'PUSH_STATUS_PORT=',
-      `PUSH_STATUS_PORT=${argv.pushStatusPort}${regexEscape}    ports:${regexEscape}        - ${argv.pushStatusPort}:${argv.pushStatusPort}`,
-    );
-  }
-  if (argv.prefix) {
-    contents = contents.replace('PREFIX=', `PREFIX=${argv.prefix}`);
-  }
-
-  fs.writeFileSync(dockerComposeFile, contents);
-  logger.info('Docker-compose file created');
-}
-
 function UpdateGrafanaConfigFolder() {
   const configDirPath = join(__dirname, '../../grafanaConfig');
   if (fs.existsSync(configDirPath) && !argv.force) {
@@ -125,8 +77,6 @@ async function Setup(cli) {
     process.exit(-1);
   }
 
-  UpdateEnvFile();
-  await UpdateDockerComposeFile();
   UpdateGrafanaConfigFolder();
 }
 
