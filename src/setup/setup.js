@@ -45,15 +45,8 @@ async function UpdateDockerComposeFile() {
   contents = contents.replace('3000:3000', `${argv.grafanaPort}:${argv.grafanaPort}`);
   contents = contents.replace('http://localhost:3000/login', `http://localhost:${argv.grafanaPort}/login`);
 
-  if (argv.relayPort) {
-    contents = contents.replace('2003:2003', `${argv.relayPort}:2003`);
-  } else {
-    contents = contents.replace(createRegexWithEscape('ports:\r\n      - 2003:2003'), '');
-  }
   if (argv.serverPort) {
-    contents = contents
-      .replace('http://localhost:21025/web', `http://localhost:${argv.serverPort}/web`)
-      .replace('SERVER_PORT: 21025', `SERVER_PORT: ${argv.serverPort}`);
+    contents = contents.replace('SERVER_PORT: 21025', `SERVER_PORT: ${argv.serverPort}`);
   }
   if (argv.pushStatusPort) {
     contents = contents.replace(
