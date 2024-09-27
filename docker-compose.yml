@@ -16,8 +16,8 @@ services:
   graphite:
     image: graphiteapp/graphite-statsd
     volumes:
+      - ./config/graphite:/opt/graphite/conf
       - ./logs/graphite:/var/log
-      - ./grafanaConfig/graphite:/opt/graphite/conf
       - graphite_data:/opt/graphite/storage
     networks:
       - stats
@@ -25,11 +25,18 @@ services:
   grafana:
     image: grafana/grafana-oss:9.3.6-ubuntu
     volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafanaConfig/grafana:/etc/grafana
+      - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
       - ./logs/grafana:/var/log/grafana
+      - grafana_data:/var/lib/grafana
     ports:
-      - ${GRAFANA_PORT}:${GRAFANA_PORT}
+      - ${GRAFANA_PORT}:3000
+    environment:
+      - GF_SECURITY_ADMIN_USER=${ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - GF_DOMAIN=${HOSTNAME}
+      - GF_SMTP_FROM_ADDRESS=${EMAIL_ADDRESS}
+      - GF_AUTH_ANONYMOUS_ENABLED=${ANONYMOUS_AUTH_ENABLED}
     healthcheck:
       test: "curl -fsSL -o /dev/null http://localhost:${GRAFANA_PORT}/login"
       interval: 10s

@@ -2,13 +2,15 @@
   "name": "screeps-grafana-go_carbon",
   "version": "1.1.0",
   "scripts": {
-    "setup": "node bin/server.js setup",
-    "start": "node bin/server.js start --grafanaPort=3000",
-    "start:test": "node bin/server.js start --grafanaPort=3000 --force",
-    "rebuild": "docker compose build --no-cache",
+    "start": "docker compose up -d",
+    "start:logs": "docker compose up -d && docker compose logs -ft",
+    "logs": "docker compose logs -ft",
+    "stop": "docker compose stop",
+    "reset": "docker compose down",
+    "reset:hard": "docker compose down -v",
+    "rebuild": "docker compose build --no-cache && docker compose down stats-getter && docker compose up -d stats-getter",
     "lint": "eslint src/**/*.js && eslint dashboards/**/*.js",
-    "lint:fix": "eslint src/**/*.js --fix && eslint dashboards/**/*.js --fix",
-    "update-stats-getter": "docker-compose up --detach --build"
+    "lint:fix": "eslint src/**/*.js --fix && eslint dashboards/**/*.js --fix"
   },
   "dependencies": {
     "axios": "^0.27.2",
@@ -29,7 +31,7 @@
   "files": [
     "src",
     "dashboards",
-    "grafanaConfig.example",
+    "config",
     "users.example.json",
     "docker-compose.yml",
     "env.example",

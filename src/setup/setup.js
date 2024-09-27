@@ -1,61 +1,10 @@
 const fs = require('fs');
-const fse = require('fs-extra');
 const { join } = require('path');
 const { execSync } = require('child_process');
 
 let argv;
 /** @type {import('winston').Logger} */
 let logger;
-
-const isWindows = process.platform === 'win32';
-const regexEscape = isWindows ? '\r\n' : '\n';
-
-function createRegexWithEscape(string) {
-  return new RegExp(string.replace('\r\n', regexEscape));
-}
-
-function UpdateGrafanaConfigFolder() {
-  const configDirPath = join(__dirname, '../../grafanaConfig');
-  if (fs.existsSync(configDirPath) && !argv.force) {
-    return logger.warn('Grafana config folder already exists, use --force to overwrite it');
-  }
-
-  fse.copySync(join(__dirname, '../../grafanaConfig.example'), configDirPath);
-  const grafanaIniFile = join(configDirPath, './grafana/grafana.ini');
-  let grafanaIniText = fs.readFileSync(grafanaIniFile, 'utf8');
-
-  if (argv.username) grafanaIniText = grafanaIniText.replace(/admin_user = (.*)/, `admin_user = ${argv.username}`);
-  if (argv.password) grafanaIniText = grafanaIniText.replace(/admin_password = (.*)/, `admin_password = ${argv.password}`);
-  if (argv.grafanaDomain) {
-    grafanaIniText = grafanaIniText.replace('domain = localhost', `domain = ${argv.grafanaDomain}`);
-    grafanaIniText = grafanaIniText.replace('from_address = admin@localhost', `from_address = admin@${argv.grafanaDomain}`);
-  }
-  if (argv.grafanaPort) {
-    grafanaIniText = grafanaIniText.replace('http_port = 3000', `http_port = ${argv.grafanaPort}`);
-  }
-  grafanaIniText = grafanaIniText.replace(
-    createRegexWithEscape('enable anonymous access\r\nenabled = (.*)'),
-    `enable anonymous access${regexEscape}enabled = ${argv.enableAnonymousAccess ? 'true' : 'false'}`,
-  );
-  fs.writeFileSync(grafanaIniFile, grafanaIniText);
-
-  // This can just be set manually in the config folder.
-  /*
-  const storageSchemasFile = join(grafanaConfigFolder, './go-carbon/storage-schemas.conf');
-  let storageSchemasText = fs.readFileSync(storageSchemasFile, 'utf8');
-  const { defaultRetention } = argv;
-
-  if (defaultRetention) {
-    storageSchemasText = storageSchemasText.replace(
-      createRegexWithEscape('pattern = .*\r\nretentions = (.*)'),
-      `pattern = .*${regexEscape}retentions = ${defaultRetention}`,
-    );
-  }
-  fs.writeFileSync(storageSchemasFile, storageSchemasText);
-  */
-
-  logger.info('Grafana config folder created');
-}
 
 function resetFolders() {
   const logsPath = join(__dirname, '../../logs');
@@ -76,8 +25,6 @@ async function Setup(cli) {
     logger.error('missing users.json file');
     process.exit(-1);
   }
-
-  UpdateGrafanaConfigFolder();
 }
 
 module.exports = Setup;
