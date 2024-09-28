@@ -8,5 +8,11 @@
         "winston": "^3.8.1",
         "winston-daily-rotate-file": "^4.7.1"
     },
-    "type": "module"
+    "type": "module",
+    "devDependencies": {
+        "@types/express": "^5.0.0",
+        "@types/graphite": "^0.1.2",
+        "@types/node": "^22.7.4",
+        "@types/node-cron": "^3.0.11"
+    }
 }

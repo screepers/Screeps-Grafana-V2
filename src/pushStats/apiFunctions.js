@@ -14,7 +14,8 @@ import { createLogger, format, transports } from 'winston';
 // eslint-disable-next-line import/no-unresolved
 import 'winston-daily-rotate-file';
 
-const users = JSON.parse(fs.readFileSync('users.json'));
+/** @type {UserInfo[]} */
+const users = JSON.parse(fs.readFileSync('users.json').toString('utf8'));
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -40,6 +41,11 @@ const logger = createLogger({
   transports: [transport],
 });
 
+/**
+ *
+ * @param {string} data
+ * @returns
+ */
 async function gz(data) {
   if (!data) return {};
   const buf = Buffer.from(data.slice(3), 'base64');
@@ -47,6 +53,11 @@ async function gz(data) {
   return JSON.parse(ret.toString());
 }
 
+/**
+ *
+ * @param {any} obj
+ * @returns
+ */
 function removeNonNumbers(obj) {
   if (!obj) return obj;
 
@@ -64,11 +75,12 @@ function removeNonNumbers(obj) {
   return obj;
 }
 
+/** @type {string | undefined} */
 let privateHost;
 let serverPort = 21025;
 
 function getPrivateHost() {
-  serverPort = process.env.SERVER_PORT || 21025;
+  serverPort = parseInt(process.env.SERVER_PORT, 10) || 21025;
   const hosts = [
     'localhost',
     'host.docker.internal',
@@ -109,6 +121,12 @@ if (!privateHost && needsPrivateHost) {
   TryToGetPrivateHost();
 }
 
+/**
+ *
+ * @param {string} host
+ * @param {UserType} type
+ * @returns
+ */
 async function getHost(host, type) {
   if (type === 'mmo') return 'screeps.com';
   if (type === 'season') return 'screeps.com/season';
@@ -116,7 +134,17 @@ async function getHost(host, type) {
   return privateHost;
 }
 
+/**
+ *
+ * @param {Omit<UserInfo,
+ * "shards" | "replaceName" | "password" | "prefix" | "segment"> & { token?: string }} info
+ * @param {string} path
+ * @param {'GET'|'POST'} method
+ * @param {{}} body
+ * @returns {http.RequestOptions & {body: {}, isHTTPS: boolean}}
+ */
 async function getRequestOptions(info, path, method = 'GET', body = {}) {
+  /** @type {Record<string, string|number>} */
   const headers = {
     'Content-Type': 'application/json',
     'Content-Length': Buffer.byteLength(JSON.stringify(body)),
@@ -134,6 +162,12 @@ async function getRequestOptions(info, path, method = 'GET', body = {}) {
     isHTTPS: info.type === 'mmo',
   };
 }
+
+/**
+ *
+ * @param {https.RequestOptions & { body?: {}, isHTTPS?: boolean }} options
+ * @returns
+ */
 async function req(options) {
   const reqBody = JSON.stringify(options.body);
   const { isHTTPS } = options;
@@ -171,12 +205,13 @@ async function req(options) {
     .then((result) => {
       if (result === 'Timeout') {
         logger.log('info', 'Timeout hit!', new Date(), JSON.stringify(options), reqBody);
-        return;
+        return undefined;
       }
-      // is result string
-      if (typeof result === 'string' && result.startsWith('Rate limit exceeded')) logger.log('error', { data: result, options });
-      else logger.log('info', { data: `${JSON.stringify(result).length / 1000} MB`, options });
-      // eslint-disable-next-line consistent-return
+      if (typeof result === 'string' && result.startsWith('Rate limit exceeded')) {
+        logger.log('error', { data: result, options });
+      } else {
+        logger.log('info', { data: `${JSON.stringify(result).length / 1000} MB`, options });
+      }
       return result;
     })
     .catch((result) => {
@@ -186,8 +221,13 @@ async function req(options) {
 }
 
 export default class {
+  /**
+   *
+   * @param {UserInfo} info
+   * @returns
+   */
   static async getPrivateServerToken(info) {
-    const options = await getRequestOptions({ type: 'private', username: info.username, host: info.host }, '/api/auth/signin', 'POST', {
+    const options = await getRequestOptions(info, '/api/auth/signin', 'POST', {
       email: info.username,
       password: info.password,
     });
@@ -196,13 +236,18 @@ export default class {
     return res.token;
   }
 
+  /**
+   *
+   * @param {UserInfo} info
+   * @param {string} shard
+   * @param {string} statsPath
+   * @returns
+   */
   static async getMemory(info, shard, statsPath = 'stats') {
     const options = await getRequestOptions(info, `/api/user/memory?path=${statsPath}&shard=${shard}`, 'GET');
     const res = await req(options);
 
-    if (res) {
-      console.log(`Got memory from ${info.username} in ${shard} `);
-    } else {
+    if (!res) {
       return undefined;
     }
 
@@ -210,6 +255,12 @@ export default class {
     return data;
   }
 
+  /**
+   *
+   * @param {UserInfo} info
+   * @param {string} shard
+   * @returns
+   */
   static async getSegmentMemory(info, shard) {
     const options = await getRequestOptions(info, `/api/user/memory-segment?segment=${info.segment}&shard=${shard}`, 'GET');
     const res = await req(options);
@@ -222,21 +273,36 @@ export default class {
     }
   }
 
+  /**
+   *
+   * @param {UserInfo} info
+   * @returns
+   */
   static async getUserinfo(info) {
     const options = await getRequestOptions(info, '/api/auth/me', 'GET');
     const res = await req(options);
     return res;
   }
 
+  /**
+   *
+   * @param {UserInfo} info
+   * @returns
+   */
   static async getLeaderboard(info) {
     const options = await getRequestOptions(info, `/api/leaderboard/find?username=${info.username}&mode=world`, 'GET');
     const res = await req(options);
     return res;
   }
 
+  /**
+   *
+   * @param {string | undefined} host
+   * @returns
+   */
   static async getServerStats(host) {
     const serverHost = host || privateHost;
-    const options = await getRequestOptions({ host: serverHost }, '/api/stats/server', 'GET');
+    const options = await getRequestOptions(/** @type {UserInfo} */ ({ host: serverHost }), '/api/stats/server', 'GET');
     const res = await req(options);
     if (!res || !res.users) {
       logger.error(res);
@@ -245,9 +311,14 @@ export default class {
     return removeNonNumbers(res);
   }
 
+  /**
+   *
+   * @param {string | undefined} host
+   * @returns
+   */
   static async getAdminUtilsServerStats(host) {
     const serverHost = host || privateHost;
-    const options = await getRequestOptions({ host: serverHost }, '/stats', 'GET');
+    const options = await getRequestOptions(/** @type {UserInfo} */ ({ host: serverHost }), '/stats', 'GET');
     const res = await req(options);
     if (!res || !res.gametime) {
       logger.error(res);
@@ -255,7 +326,9 @@ export default class {
     }
 
     delete res.ticks.ticks;
+    /** @type {Record<string, any>} */
     const mUsers = {};
+    // @ts-expect-error
     res.users.forEach((user) => {
       mUsers[user.username] = user;
     });

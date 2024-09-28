@@ -15,7 +15,8 @@ const app = express();
 const pushStatusPort = Number(process.env.PUSH_STATUS_PORT);
 let lastUpload = new Date().getTime();
 
-const users = JSON.parse(fs.readFileSync('users.json'));
+/** @type {UserInfo[]} */
+const users = JSON.parse(fs.readFileSync('users.json').toString('utf8'));
 dotenv.config();
 
 const pushTransport = new transports.DailyRotateFile({
@@ -54,16 +55,23 @@ const cronLogger = createLogger({
 });
 
 class ManageStats {
+  /** @type {Record<string, {[shard: string]: UserInfo}>} */
   groupedStats;
 
   constructor() {
     this.groupedStats = {};
   }
 
+  /**
+   *
+   * @param {"mmo"|"season"|"private"} type
+   * @returns
+   */
   async handleUsers(type) {
     console.log(`[${type}] Handling Users`);
 
     const beginningOfMinute = new Date().getSeconds() < 15;
+    /** @type {(string | unknown)[]} */
     const getStatsFunctions = [];
     users.forEach((user) => {
       try {
@@ -74,12 +82,11 @@ class ManageStats {
         if (user.type === 'mmo' && shouldContinue) return;
         if (user.type === 'season' && shouldContinue) return;
 
-        for (let y = 0; y < user.shards.length; y += 1) {
-          const shard = user.shards[y];
-          getStatsFunctions.push(this.getStats(user, shard, this.message));
+        for (const shard of user.shards) {
+          getStatsFunctions.push(this.getStats(user, shard));
         }
       } catch (error) {
-        logger.error(error.message);
+        logger.error(error);
       }
     });
 
@@ -112,6 +119,7 @@ class ManageStats {
     const adminUtilsServerStats = await ApiFunc.getAdminUtilsServerStats(host);
     if (adminUtilsServerStats) {
       try {
+        /** @type {Record<string, any>} */
         const groupedAdminStatsUsers = {};
         for (const [username, user] of Object.entries(adminUtilsServerStats)) {
           groupedAdminStatsUsers[username] = user;
@@ -123,15 +131,18 @@ class ManageStats {
       }
     }
 
-    const push = await ManageStats.reportStats({
+    const stats = {
       stats: groupedStats,
       serverStats,
       adminUtilsServerStats,
-    });
+    };
+
+    const push = await ManageStats.reportStats(stats);
     if (!push) {
       console.log('Error while pushing stats');
       return;
     }
+    /** @type {string[]} */
     const typesPushed = [];
     if (Object.keys(groupedStats).length > 0) {
       typesPushed.push(type);
@@ -149,6 +160,11 @@ class ManageStats {
     }
   }
 
+  /**
+   *
+   * @param {UserInfo} userinfo
+   * @returns
+   */
   static async getLoginInfo(userinfo) {
     if (userinfo.type === 'private') {
       userinfo.token = await ApiFunc.getPrivateServerToken(userinfo);
@@ -156,6 +172,11 @@ class ManageStats {
     return userinfo.token;
   }
 
+  /**
+   *
+   * @param {UserInfo} userinfo
+   * @returns {Promise<{ rank: number, score: number }>}
+   */
   static async addLeaderboardData(userinfo) {
     try {
       const leaderboard = await ApiFunc.getLeaderboard(userinfo);
@@ -169,6 +190,12 @@ class ManageStats {
     }
   }
 
+  /**
+   *
+   * @param {UserInfo} userinfo
+   * @param {string} shard
+   * @returns {Promise<string|unknown>}
+   */
   async getStats(userinfo, shard) {
     try {
       await ManageStats.getLoginInfo(userinfo);
@@ -183,6 +210,13 @@ class ManageStats {
     }
   }
 
+  /**
+   *
+   * @param {UserInfo} userinfo
+   * @param {string} shard
+   * @param {*} stats
+   * @returns
+   */
   async processStats(userinfo, shard, stats) {
     if (Object.keys(stats).length === 0) return;
     const me = await ApiFunc.getUserinfo(userinfo);
@@ -191,6 +225,11 @@ class ManageStats {
     this.pushStats(userinfo, stats, shard);
   }
 
+  /**
+   *
+   * @param {*} stats
+   * @returns
+   */
   static async reportStats(stats) {
     return new Promise((resolve) => {
       console.log(`Writing stats ${JSON.stringify(stats)} to graphite`);
@@ -206,6 +245,13 @@ class ManageStats {
     });
   }
 
+  /**
+   *
+   * @param {UserInfo} userinfo
+   * @param {*} stats
+   * @param {string} shard
+   * @returns
+   */
   pushStats(userinfo, stats, shard) {
     if (Object.keys(stats).length === 0) return;
     const username = userinfo.replaceName !== undefined ? userinfo.replaceName : userinfo.username;
@@ -221,13 +267,13 @@ const groupedUsers = users.reduce((group, user) => {
   group[type] = group[type] ?? [];
   group[type].push(user);
   return group;
-}, {});
+}, /** @type {Record<UserType, UserInfo[]>} */ ({}));
 
 cron.schedule('*/30 * * * * *', async () => {
   console.log(`Cron event hit: ${new Date()}`);
   cronLogger.info(`Cron event hit: ${new Date()}`);
   Object.keys(groupedUsers).forEach((type) => {
-    new ManageStats(groupedUsers[type]).handleUsers(type);
+    new ManageStats().handleUsers(/** @type {UserType} */(type));
   });
 });
 
@@ -237,7 +283,7 @@ if (pushStatusPort) {
   });
   app.get('/', (req, res) => {
     const diffCompleteMinutes = Math.ceil(
-      Math.abs(parseInt(new Date().getTime(), 10) - parseInt(lastUpload, 10)) / (1000 * 60),
+      Math.abs(new Date().getTime() - lastUpload) / (1000 * 60),
     );
     res.json({ result: diffCompleteMinutes < 300, lastUpload, diffCompleteMinutes });
   });
