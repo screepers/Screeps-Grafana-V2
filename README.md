@@ -12,7 +12,7 @@
 
 ## Setup
 
-1. Edit `example.env` and `docker-compose.example.yml` to match your needs. This step is not required if you are using the default setup.
+1. Copy `.env.example` to `.env` and edit to match your needs.
 2. Copy `users.example.json` to `users.json` and edit it according to [User Setup](#User-Setup).
 3. The configuration files for both Grafana and Graphite are in `config/grafana` and `config/graphite` respectively.
 4. If you have a dashboard you want to auto-add, you can drop their JSON files into `config/grafana/provisioning/dashboards`
@@ -78,6 +78,7 @@ If the private server is not hosted on localhost, add the host to the user:
     "shards": ["screeps"],
     "password": "password",
     "host": "192.168.1.10",
+    "port": 21025,
 }
 ```
 
@@ -93,39 +94,3 @@ If the segment of the stats is not memory, add it to the user:
     "segment": 0,
 }
 ```
-
-Update all .example files and/or folders to match your needs. This step is not required if you are using the default setup.
-
-### Run Commands
-
-#### Config
-
-* `--force`: force the non .example config files to be overwritten.
-* `--debug`: listen to setup Docker logs
-* `--username`: overwrite the username for the Grafana admin user
-* `--password`: overwrite the password for the Grafana admin user
-* `--enableAnonymousAccess`: enable anonymous access to Grafana
-
-#### Network
-
-* `--grafanaDomain`: Overwrite grafana.ini domain
-* `--grafanaPort`: port for Grafana to run on
-* `--relayPort`: port for relay-ng to run on (default: 2003)
-* `--pushStatusPort`: port for the stats-getter push API (default: false)
-  true will set it to 10004, otherwise specify a port number it'll listen to
-
-#### Exporting
-
-* `--deleteLogs`: deletes the logs folder
-* `--removeWhisper`: Deletes the carbon whisper folder
-* `--removeVolumes`: Remove all volumes, including the grafana database.
-
-## Usage
-
-* `npm run setup`: to execute setup only
-* `npm run start`: to configure and start it
-* For other run commands like eslint, check out package.json scripts object.
-
-Go to [localhost:3000](http://localhost:3000) (if you used port 3000) and login with `admin` and `password` (or your custom set login info).
-
-Its possible to use https for your grafana instance, check out this [tutorial](https://www.turbogeek.co.uk/grafana-how-to-configure-ssl-https-in-grafana/) for example on how to do this, enough info online about it. I dont support this (yet)
