@@ -17,5 +17,6 @@ module.exports = {
         "no-underscore-dangle":"off",
         "no-param-reassign": ["error", { "props": false }],
         "no-restricted-syntax": "off",
+        "no-continue": "off",
     }
 }

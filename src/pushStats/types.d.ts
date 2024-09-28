@@ -4,6 +4,7 @@ interface UserInfo {
     type: UserType;
     username: string;
     host: string;
+    port: number;
     replaceName: string;
     password: string;
     token: string;
