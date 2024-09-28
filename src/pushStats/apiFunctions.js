@@ -5,9 +5,6 @@ import util from 'util';
 import zlib from 'zlib';
 import fs from 'fs';
 // import users from './users.json' assert {type: 'json'};
-import { fileURLToPath } from 'url';
-import * as dotenv from 'dotenv';
-import { join, dirname } from 'path';
 
 import { createLogger, format, transports } from 'winston';
 
@@ -16,10 +13,6 @@ import 'winston-daily-rotate-file';
 
 /** @type {UserInfo[]} */
 const users = JSON.parse(fs.readFileSync('users.json').toString('utf8'));
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-dotenv.config({ path: join(__dirname, './.env') });
 const needsPrivateHost = users.some((u) => u.type !== 'mmo' && !u.host);
 
 const gunzipAsync = util.promisify(zlib.gunzip);

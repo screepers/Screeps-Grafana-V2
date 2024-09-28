@@ -5,8 +5,6 @@ import graphite from 'graphite';
 import { createLogger, format, transports } from 'winston';
 // eslint-disable-next-line import/no-unresolved
 import 'winston-daily-rotate-file';
-import fs from 'fs';
-import * as dotenv from 'dotenv';
 // eslint-disable-next-line import/no-unresolved
 import express from 'express';
 import ApiFunc from './apiFunctions.js';
@@ -17,7 +15,6 @@ let lastUpload = new Date().getTime();
 
 /** @type {UserInfo[]} */
 const users = JSON.parse(fs.readFileSync('users.json').toString('utf8'));
-dotenv.config();
 
 const pushTransport = new transports.DailyRotateFile({
   filename: 'logs/push-%DATE%.log',
