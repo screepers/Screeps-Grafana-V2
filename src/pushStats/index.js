@@ -56,11 +56,8 @@ const cronLogger = createLogger({
 class ManageStats {
   groupedStats;
 
-  message;
-
   constructor() {
     this.groupedStats = {};
-    this.message = '----------------------------------------------------------------\r\n';
   }
 
   async handleUsers(type) {
@@ -92,28 +89,21 @@ class ManageStats {
 
     const { groupedStats } = this;
 
-    if (type === 'mmo') {
+    if (type === 'mmo' || type === 'season') {
       if (Object.keys(groupedStats).length > 0) {
-        if (!await ManageStats.reportStats({ stats: groupedStats })) return console.log('Error while pushing stats');
-
-        console.log(`[${type}] Pushed stats to graphite`);
-
-        return console.log(this.message);
+        const push = await ManageStats.reportStats({ stats: groupedStats });
+        if (push) {
+          console.log('Error while pushing stats');
+        } else {
+          console.log(`[${type}] Pushed stats to graphite`);
+        }
+        return;
       }
 
-      if (beginningOfMinute) return console.log('No stats to push');
-      return undefined;
-    }
-    if (type === 'season') {
-      if (Object.keys(groupedStats).length > 0) {
-        if (!await ManageStats.reportStats({ stats: groupedStats })) return console.log('Error while pushing stats');
-
-        console.log(`[${type}] Pushed stats to graphite`);
-
-        return console.log(this.message);
+      if (beginningOfMinute) {
+        console.log('No stats to push');
       }
-      if (beginningOfMinute) return console.log('No stats to push');
-      return undefined;
+      return;
     }
 
     const privateUser = users.find((user) => user.type === 'private' && user.host);
@@ -133,20 +123,30 @@ class ManageStats {
       }
     }
 
-    if (!await ManageStats.reportStats({ stats: groupedStats, serverStats, adminUtilsServerStats })) return console.log('Error while pushing stats');
-    let statsPushed = '';
+    const push = await ManageStats.reportStats({
+      stats: groupedStats,
+      serverStats,
+      adminUtilsServerStats,
+    });
+    if (!push) {
+      console.log('Error while pushing stats');
+      return;
+    }
+    const typesPushed = [];
     if (Object.keys(groupedStats).length > 0) {
-      statsPushed = `Pushed ${type} stats`;
+      typesPushed.push(type);
     }
     if (serverStats) {
-      statsPushed += statsPushed.length > 0 ? ', server stats' : 'Pushed server stats';
+      typesPushed.push('server stats');
     }
     if (adminUtilsServerStats) {
-      statsPushed += statsPushed.length > 0 ? ', adminUtilsServerStats' : 'Pushed server stats';
+      typesPushed.push('adminUtilsServerStats');
     }
-    this.message += statsPushed.length > 0 ? `> ${statsPushed} to graphite` : '> Pushed no stats to graphite';
-    logger.info(this.message);
-    return console.log(this.message);
+    if (typesPushed.length) {
+      logger.info(`> Pushed ${typesPushed.join(', ')} to graphite`);
+    } else {
+      logger.info('> Pushed no stats to graphite');
+    }
   }
 
   static async getLoginInfo(userinfo) {
@@ -224,9 +224,8 @@ const groupedUsers = users.reduce((group, user) => {
 }, {});
 
 cron.schedule('*/30 * * * * *', async () => {
-  const message = `Cron event hit: ${new Date()}`;
-  console.log(`\r\n${message}\n`);
-  cronLogger.info(message);
+  console.log(`Cron event hit: ${new Date()}`);
+  cronLogger.info(`Cron event hit: ${new Date()}`);
   Object.keys(groupedUsers).forEach((type) => {
     new ManageStats(groupedUsers[type]).handleUsers(type);
   });
