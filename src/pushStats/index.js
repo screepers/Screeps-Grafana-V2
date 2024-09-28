@@ -5,18 +5,14 @@ import graphite from 'graphite';
 import { createLogger, format, transports } from 'winston';
 // eslint-disable-next-line import/no-unresolved
 import 'winston-daily-rotate-file';
-import fs from 'fs';
-import * as dotenv from 'dotenv';
 // eslint-disable-next-line import/no-unresolved
 import express from 'express';
 import ApiFunc from './apiFunctions.js';
+import loadUsers from './users.js';
 
 const app = express();
-const port = 10004;
+const pushStatusPort = Number(process.env.PUSH_STATUS_PORT);
 let lastUpload = new Date().getTime();
-
-const users = JSON.parse(fs.readFileSync('users.json'));
-dotenv.config();
 
 const pushTransport = new transports.DailyRotateFile({
   filename: 'logs/push-%DATE%.log',
@@ -54,108 +50,100 @@ const cronLogger = createLogger({
 });
 
 class ManageStats {
+  /** @type {Record<string, {[shard: string]: UserInfo}>} */
   groupedStats;
-
-  message;
 
   constructor() {
     this.groupedStats = {};
-    this.message = '----------------------------------------------------------------\r\n';
   }
 
-  async handleUsers(type) {
-    console.log(`[${type}] Handling Users`);
+  /**
+   *
+   * @param {string} host
+   * @param {UserInfo[]} hostUsers
+   * @returns
+   */
+  async handleUsers(host, hostUsers) {
+    console.log(`[${host}] Handling Users`);
 
     const beginningOfMinute = new Date().getSeconds() < 15;
+    /** @type {(Promise<void>)[]} */
     const getStatsFunctions = [];
-    users.forEach((user) => {
+    for (const user of hostUsers) {
       try {
-        if (user.type !== type) return;
+        if (user.host !== host) continue;
 
         const rightMinuteForShard = new Date().getMinutes() % user.shards.length === 0;
         const shouldContinue = !beginningOfMinute || !rightMinuteForShard;
-        if (user.type === 'mmo' && shouldContinue) return;
-        if (user.type === 'season' && shouldContinue) return;
+        if (user.type === 'mmo' && shouldContinue) continue;
+        if (user.type === 'season' && shouldContinue) continue;
 
-        for (let y = 0; y < user.shards.length; y += 1) {
-          const shard = user.shards[y];
-          getStatsFunctions.push(this.getStats(user, shard, this.message));
+        for (const shard of user.shards) {
+          getStatsFunctions.push(this.getStats(user, shard));
         }
       } catch (error) {
-        logger.error(error.message);
+        logger.error(error);
       }
-    });
+    }
 
-    console.log(`[${type}] Getting ${getStatsFunctions.length} statistics`);
+    console.log(`[${host}] Getting ${getStatsFunctions.length} statistics`);
 
     await Promise.all(getStatsFunctions);
 
-    const { groupedStats } = this;
+    /** @type {Record<string, any>} */
+    const stats = {
+      stats: this.groupedStats,
+    };
 
-    if (type === 'mmo') {
-      if (Object.keys(groupedStats).length > 0) {
-        if (!await ManageStats.reportStats({ stats: groupedStats })) return console.log('Error while pushing stats');
+    if (!host.startsWith('screeps.com')) {
+      const serverStats = await ApiFunc.getServerStats(host, hostUsers[0].port);
+      const adminUtilsServerStats = await ApiFunc.getAdminUtilsServerStats(host, hostUsers[0].port);
+      if (adminUtilsServerStats) {
+        try {
+          /** @type {Record<string, any>} */
+          const groupedAdminStatsUsers = {};
+          for (const [username, user] of Object.entries(adminUtilsServerStats)) {
+            groupedAdminStatsUsers[username] = user;
+          }
 
-        console.log(`[${type}] Pushed stats to graphite`);
-
-        return console.log(this.message);
-      }
-
-      if (beginningOfMinute) return console.log('No stats to push');
-      return undefined;
-    }
-    if (type === 'season') {
-      if (Object.keys(groupedStats).length > 0) {
-        if (!await ManageStats.reportStats({ stats: groupedStats })) return console.log('Error while pushing stats');
-
-        console.log(`[${type}] Pushed stats to graphite`);
-
-        return console.log(this.message);
-      }
-      if (beginningOfMinute) return console.log('No stats to push');
-      return undefined;
-    }
-
-    const privateUser = users.find((user) => user.type === 'private' && user.host);
-    const host = privateUser ? privateUser.host : undefined;
-    const serverStats = await ApiFunc.getServerStats(host);
-    const adminUtilsServerStats = await ApiFunc.getAdminUtilsServerStats(host);
-    if (adminUtilsServerStats) {
-      try {
-        const groupedAdminStatsUsers = {};
-        for (const [username, user] of Object.entries(adminUtilsServerStats)) {
-          groupedAdminStatsUsers[username] = user;
+          adminUtilsServerStats.users = groupedAdminStatsUsers;
+        } catch (error) {
+          console.log(error);
         }
-
-        adminUtilsServerStats.users = groupedAdminStatsUsers;
-      } catch (error) {
-        console.log(error);
       }
+      console.log(`[${host}] Server stats: ${serverStats ? 'yes' : 'no'}, adminUtils: ${adminUtilsServerStats ? 'yes' : 'no'}`);
+      stats.serverStats = serverStats;
+      stats.adminUtilsServerStats = adminUtilsServerStats;
     }
 
-    if (!await ManageStats.reportStats({ stats: groupedStats, serverStats, adminUtilsServerStats })) return console.log('Error while pushing stats');
-    let statsPushed = '';
-    if (Object.keys(groupedStats).length > 0) {
-      statsPushed = `Pushed ${type} stats`;
+    const push = await ManageStats.reportStats(stats);
+    if (!push) {
+      console.log(`[${host}] Error while pushing stats`);
+      return;
     }
-    if (serverStats) {
-      statsPushed += statsPushed.length > 0 ? ', server stats' : 'Pushed server stats';
+    /** @type {string[]} */
+    const typesPushed = [];
+    if (Object.keys(stats.stats).length > 0) {
+      typesPushed.push(host);
     }
-    if (adminUtilsServerStats) {
-      statsPushed += statsPushed.length > 0 ? ', adminUtilsServerStats' : 'Pushed server stats';
+    if (stats.serverStats) {
+      typesPushed.push('server stats');
     }
-    this.message += statsPushed.length > 0 ? `> ${statsPushed} to graphite` : '> Pushed no stats to graphite';
-    logger.info(this.message);
-    return console.log(this.message);
+    if (stats.adminUtilsServerStats) {
+      typesPushed.push('admin-utils stats');
+    }
+    if (typesPushed.length) {
+      logger.info(`> [${host}] Pushed ${typesPushed.join(', ')}`);
+    } else {
+      logger.info(`> [${host}] Pushed no stats`);
+    }
   }
 
-  static async getLoginInfo(userinfo) {
-    if (userinfo.type === 'private') {
-      userinfo.token = await ApiFunc.getPrivateServerToken(userinfo);
-    }
-    return userinfo.token;
-  }
-
+  /**
+   *
+   * @param {UserInfo} userinfo
+   * @returns {Promise<{ rank: number, score: number }>}
+   */
   static async addLeaderboardData(userinfo) {
     try {
       const leaderboard = await ApiFunc.getLeaderboard(userinfo);
@@ -169,31 +157,51 @@ class ManageStats {
     }
   }
 
-  async getStats(userinfo, shard) {
-    try {
-      await ManageStats.getLoginInfo(userinfo);
-      const stats = userinfo.segment === undefined
-        ? await ApiFunc.getMemory(userinfo, shard)
-        : await ApiFunc.getSegmentMemory(userinfo, shard);
-
-      await this.processStats(userinfo, shard, stats);
-      return 'success';
-    } catch (error) {
-      return error;
+  /**
+   *
+   * @param {UserInfo} userinfo
+   * @returns
+   */
+  static async getLoginInfo(userinfo) {
+    if (userinfo.type === 'private') {
+      userinfo.token = await ApiFunc.getPrivateServerToken(userinfo);
     }
+    return userinfo.token;
   }
 
-  async processStats(userinfo, shard, stats) {
+  /**
+   *
+   * @param {UserInfo} userinfo
+   * @param {string} shard
+   * @returns {Promise<void>}
+   */
+  async getStats(userinfo, shard) {
+    await ManageStats.getLoginInfo(userinfo);
+    const stats = userinfo.segment === undefined
+      ? await ApiFunc.getMemory(userinfo, shard)
+      : await ApiFunc.getSegmentMemory(userinfo, shard);
+
     if (Object.keys(stats).length === 0) return;
+
+    console.log(`Got memory from ${userinfo.username} in ${shard}`);
+
     const me = await ApiFunc.getUserinfo(userinfo);
     if (me) stats.power = me.power || 0;
     stats.leaderboard = await ManageStats.addLeaderboardData(userinfo);
     this.pushStats(userinfo, stats, shard);
   }
 
+  /**
+   *
+   * @param {*} stats
+   * @returns
+   */
   static async reportStats(stats) {
     return new Promise((resolve) => {
-      console.log(`Writing stats ${JSON.stringify(stats)} to graphite`);
+      if (Object.keys(stats).length === 0) {
+        resolve(false);
+      }
+      console.debug(`Writing stats ${JSON.stringify(stats)}`);
       client.write({ [`${process.env.PREFIX ? `${process.env.PREFIX}.` : ''}screeps`]: stats }, (err) => {
         if (err) {
           console.log(err);
@@ -203,43 +211,56 @@ class ManageStats {
         lastUpload = new Date().getTime();
         resolve(true);
       });
-      // resolve(true);
     });
   }
 
+  /**
+   *
+   * @param {UserInfo} userinfo
+   * @param {*} stats
+   * @param {string} shard
+   * @returns
+   */
   pushStats(userinfo, stats, shard) {
-    if (Object.keys(stats).length === 0) return;
-    const username = userinfo.replaceName !== undefined ? userinfo.replaceName : userinfo.username;
-    this.groupedStats[(userinfo.prefix ? `${userinfo.prefix}.` : '') + username] = { [shard]: stats };
+    const statSize = Object.keys(stats).length;
+    if (statSize === 0) return;
+    const username = userinfo.replaceName ? userinfo.replaceName : userinfo.username;
+    const userStatsKey = (userinfo.prefix ? `${userinfo.prefix}.` : '') + username;
 
-    console.log(`Pushing stats for ${(userinfo.prefix ? `${userinfo.prefix}.` : '') + username} in ${shard}`);
+    console.log(`[${userinfo.host}] Pushing ${statSize} stats for ${userStatsKey} in ${shard}`);
+    if (!this.groupedStats[userStatsKey]) {
+      this.groupedStats[userStatsKey] = { [shard]: stats };
+    } else {
+      this.groupedStats[userStatsKey][shard] = stats;
+    }
   }
 }
 
-const groupedUsers = users.reduce((group, user) => {
-  const { type } = user;
-  // eslint-disable-next-line no-param-reassign
-  group[type] = group[type] ?? [];
-  group[type].push(user);
-  return group;
-}, {});
-
 cron.schedule('*/30 * * * * *', async () => {
-  const message = `Cron event hit: ${new Date()}`;
-  console.log(`\r\n${message}\n`);
-  cronLogger.info(message);
-  Object.keys(groupedUsers).forEach((type) => {
-    new ManageStats(groupedUsers[type]).handleUsers(type);
-  });
+  console.log(`Cron event hit: ${new Date()}`);
+  cronLogger.info(`Cron event hit: ${new Date()}`);
+  /** @type {UserInfo[]} */
+  const users = await loadUsers();
+
+  const usersByHost = users.reduce((group, user) => {
+    const { host } = user;
+    group[host] = group[host] ?? [];
+    group[host].push(user);
+    return group;
+  }, /** @type {Record<string, UserInfo[]>} */ ({}));
+
+  for (const [host, usersForHost] of Object.entries(usersByHost)) {
+    new ManageStats().handleUsers(host, usersForHost);
+  }
 });
 
-if (process.env.INCLUDE_PUSH_STATUS_API === 'true') {
-  app.listen(port, () => {
-    console.log(`App listening at http://localhost:${port}`);
+if (pushStatusPort) {
+  app.listen(pushStatusPort, () => {
+    console.log(`App listening at http://localhost:${pushStatusPort}`);
   });
   app.get('/', (req, res) => {
     const diffCompleteMinutes = Math.ceil(
-      Math.abs(parseInt(new Date().getTime(), 10) - parseInt(lastUpload, 10)) / (1000 * 60),
+      Math.abs(new Date().getTime() - lastUpload) / (1000 * 60),
     );
     res.json({ result: diffCompleteMinutes < 300, lastUpload, diffCompleteMinutes });
   });

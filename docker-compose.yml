@@ -16,8 +16,8 @@ services:
   graphite:
     image: graphiteapp/graphite-statsd
     volumes:
+      - ./config/graphite:/opt/graphite/conf
       - ./logs/graphite:/var/log
-      - ./grafanaConfig/graphite:/opt/graphite/conf
       - graphite_data:/opt/graphite/storage
     networks:
       - stats
@@ -25,13 +25,20 @@ services:
   grafana:
     image: grafana/grafana-oss:9.3.6-ubuntu
     volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafanaConfig/grafana:/etc/grafana
+      - ./config/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
       - ./logs/grafana:/var/log/grafana
+      - grafana_data:/var/lib/grafana
     ports:
-      - 3000:3000
+      - ${GRAFANA_PORT}:3000
+    environment:
+      - GF_SECURITY_ADMIN_USER=${ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - GF_DOMAIN=${HOSTNAME}
+      - GF_SMTP_FROM_ADDRESS=${EMAIL_ADDRESS}
+      - GF_AUTH_ANONYMOUS_ENABLED=${ANONYMOUS_AUTH_ENABLED}
     healthcheck:
-      test: "curl -fsSL -o /dev/null http://localhost:3000/login"
+      test: "curl -fsSL -o /dev/null http://localhost:${GRAFANA_PORT}/login"
       interval: 10s
       timeout: 5s
       retries: 3
@@ -44,12 +51,13 @@ services:
       dockerfile: ./src/pushStats/Dockerfile
     volumes:
       - ./logs/statsGetter:/app/logs
+      - ./users.json:/app/users.json
     depends_on:
       - graphite
     environment:
-      - PREFIX=
-      - SERVER_PORT=21025
-      - INCLUDE_PUSH_STATUS_API=false
+      - PREFIX=${PREFIX}
+      - SERVER_PORT=${SERVER_PORT}
+      - PUSH_STATUS_PORT=${PUSH_STATUS_PORT}
     networks:
       - stats
     logging: *default-logging

@@ -1,25 +1,12 @@
 import http from 'http';
 import https from 'https';
-import net from 'net';
 import util from 'util';
 import zlib from 'zlib';
-import fs from 'fs';
-// import users from './users.json' assert {type: 'json'};
-import { fileURLToPath } from 'url';
-import * as dotenv from 'dotenv';
-import { join, dirname } from 'path';
 
 import { createLogger, format, transports } from 'winston';
 
 // eslint-disable-next-line import/no-unresolved
 import 'winston-daily-rotate-file';
-
-const users = JSON.parse(fs.readFileSync('users.json'));
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-dotenv.config({ path: join(__dirname, './.env') });
-const needsPrivateHost = users.some((u) => u.type !== 'mmo' && !u.host);
 
 const gunzipAsync = util.promisify(zlib.gunzip);
 const { combine, timestamp, prettyPrint } = format;
@@ -40,6 +27,11 @@ const logger = createLogger({
   transports: [transport],
 });
 
+/**
+ *
+ * @param {string} data
+ * @returns
+ */
 async function gz(data) {
   if (!data) return {};
   const buf = Buffer.from(data.slice(3), 'base64');
@@ -47,6 +39,11 @@ async function gz(data) {
   return JSON.parse(ret.toString());
 }
 
+/**
+ *
+ * @param {any} obj
+ * @returns
+ */
 function removeNonNumbers(obj) {
   if (!obj) return obj;
 
@@ -64,59 +61,17 @@ function removeNonNumbers(obj) {
   return obj;
 }
 
-let privateHost;
-let serverPort = 21025;
-
-function getPrivateHost() {
-  serverPort = process.env.SERVER_PORT || 21025;
-  const hosts = [
-    'localhost',
-    'host.docker.internal',
-    '172.17.0.1',
-  ];
-  for (let h = 0; h < hosts.length; h += 1) {
-    const host = hosts[h];
-    const sock = new net.Socket();
-    sock.setTimeout(2500);
-    // eslint-disable-next-line no-loop-func
-    sock.on('connect', () => {
-      sock.destroy();
-      privateHost = host;
-    })
-      .on('error', () => {
-        sock.destroy();
-      })
-      .on('timeout', () => {
-        sock.destroy();
-      })
-      .connect(serverPort, host);
-  }
-}
-
-async function TryToGetPrivateHost() {
-  if (!privateHost && needsPrivateHost) {
-    getPrivateHost();
-    if (!privateHost) console.log('No private host found to make connection with yet! Trying again in 60 seconds.');
-    else console.log(`Private host found! Continuing with ${privateHost}.`);
-
-    // eslint-disable-next-line
-    await new Promise((resolve) => setTimeout(resolve, 60 * 1000));
-    TryToGetPrivateHost();
-  }
-}
-
-if (!privateHost && needsPrivateHost) {
-  TryToGetPrivateHost();
-}
-
-async function getHost(host, type) {
-  if (type === 'mmo') return 'screeps.com';
-  if (type === 'season') return 'screeps.com/season';
-  if (host) return host;
-  return privateHost;
-}
-
-async function getRequestOptions(info, path, method = 'GET', body = {}) {
+/**
+ *
+ * @param {Omit<UserInfo,
+ * "shards" | "replaceName" | "password" | "prefix" | "segment"> & { token?: string }} info
+ * @param {string} path
+ * @param {'GET'|'POST'} method
+ * @param {{}} body
+ * @returns {http.RequestOptions & {body: {}, isHTTPS: boolean}}
+ */
+function getRequestOptions(info, path, method = 'GET', body = {}) {
+  /** @type {Record<string, string|number>} */
   const headers = {
     'Content-Type': 'application/json',
     'Content-Length': Buffer.byteLength(JSON.stringify(body)),
@@ -125,8 +80,8 @@ async function getRequestOptions(info, path, method = 'GET', body = {}) {
   if (info.username) headers['X-Username'] = info.username;
   if (info.token) headers['X-Token'] = info.token;
   return {
-    host: await getHost(info.host, info.type),
-    port: info.type === 'mmo' ? 443 : serverPort,
+    host: info.host,
+    port: info.port,
     path,
     method,
     headers,
@@ -134,6 +89,12 @@ async function getRequestOptions(info, path, method = 'GET', body = {}) {
     isHTTPS: info.type === 'mmo',
   };
 }
+
+/**
+ *
+ * @param {https.RequestOptions & { body?: {}, isHTTPS?: boolean }} options
+ * @returns
+ */
 async function req(options) {
   const reqBody = JSON.stringify(options.body);
   const { isHTTPS } = options;
@@ -171,12 +132,13 @@ async function req(options) {
     .then((result) => {
       if (result === 'Timeout') {
         logger.log('info', 'Timeout hit!', new Date(), JSON.stringify(options), reqBody);
-        return;
+        return undefined;
       }
-      // is result string
-      if (typeof result === 'string' && result.startsWith('Rate limit exceeded')) logger.log('error', { data: result, options });
-      else logger.log('info', { data: `${JSON.stringify(result).length / 1000} MB`, options });
-      // eslint-disable-next-line consistent-return
+      if (typeof result === 'string' && result.startsWith('Rate limit exceeded')) {
+        logger.log('error', { data: result, options });
+      } else {
+        logger.log('info', { data: `${JSON.stringify(result).length / 1000} MB`, options });
+      }
       return result;
     })
     .catch((result) => {
@@ -186,8 +148,13 @@ async function req(options) {
 }
 
 export default class {
+  /**
+   *
+   * @param {UserInfo} info
+   * @returns
+   */
   static async getPrivateServerToken(info) {
-    const options = await getRequestOptions({ type: 'private', username: info.username, host: info.host }, '/api/auth/signin', 'POST', {
+    const options = getRequestOptions(info, '/api/auth/signin', 'POST', {
       email: info.username,
       password: info.password,
     });
@@ -196,13 +163,18 @@ export default class {
     return res.token;
   }
 
+  /**
+   *
+   * @param {UserInfo} info
+   * @param {string} shard
+   * @param {string} statsPath
+   * @returns
+   */
   static async getMemory(info, shard, statsPath = 'stats') {
-    const options = await getRequestOptions(info, `/api/user/memory?path=${statsPath}&shard=${shard}`, 'GET');
+    const options = getRequestOptions(info, `/api/user/memory?path=${statsPath}&shard=${shard}`, 'GET');
     const res = await req(options);
 
-    if (res) {
-      console.log(`Got memory from ${info.username} in ${shard} `);
-    } else {
+    if (!res) {
       return undefined;
     }
 
@@ -210,8 +182,14 @@ export default class {
     return data;
   }
 
+  /**
+   *
+   * @param {UserInfo} info
+   * @param {string} shard
+   * @returns
+   */
   static async getSegmentMemory(info, shard) {
-    const options = await getRequestOptions(info, `/api/user/memory-segment?segment=${info.segment}&shard=${shard}`, 'GET');
+    const options = getRequestOptions(info, `/api/user/memory-segment?segment=${info.segment}&shard=${shard}`, 'GET');
     const res = await req(options);
     if (!res || res.data == null) return {};
     try {
@@ -222,21 +200,36 @@ export default class {
     }
   }
 
+  /**
+   *
+   * @param {UserInfo} info
+   * @returns
+   */
   static async getUserinfo(info) {
-    const options = await getRequestOptions(info, '/api/auth/me', 'GET');
+    const options = getRequestOptions(info, '/api/auth/me', 'GET');
     const res = await req(options);
     return res;
   }
 
+  /**
+   *
+   * @param {UserInfo} info
+   * @returns
+   */
   static async getLeaderboard(info) {
-    const options = await getRequestOptions(info, `/api/leaderboard/find?username=${info.username}&mode=world`, 'GET');
+    const options = getRequestOptions(info, `/api/leaderboard/find?username=${info.username}&mode=world`, 'GET');
     const res = await req(options);
     return res;
   }
 
-  static async getServerStats(host) {
-    const serverHost = host || privateHost;
-    const options = await getRequestOptions({ host: serverHost }, '/api/stats/server', 'GET');
+  /**
+   *
+   * @param {string | undefined} host
+   * @param {number} port
+   * @returns
+   */
+  static async getServerStats(host, port) {
+    const options = getRequestOptions(/** @type {UserInfo} */ ({ host, port }), '/api/stats/server', 'GET');
     const res = await req(options);
     if (!res || !res.users) {
       logger.error(res);
@@ -245,9 +238,14 @@ export default class {
     return removeNonNumbers(res);
   }
 
-  static async getAdminUtilsServerStats(host) {
-    const serverHost = host || privateHost;
-    const options = await getRequestOptions({ host: serverHost }, '/stats', 'GET');
+  /**
+   *
+   * @param {string | undefined} host
+   * @param {number} port
+   * @returns
+   */
+  static async getAdminUtilsServerStats(host, port) {
+    const options = getRequestOptions(/** @type {UserInfo} */ ({ host, port }), '/stats', 'GET');
     const res = await req(options);
     if (!res || !res.gametime) {
       logger.error(res);
@@ -255,7 +253,9 @@ export default class {
     }
 
     delete res.ticks.ticks;
+    /** @type {Record<string, any>} */
     const mUsers = {};
+    // @ts-expect-error
     res.users.forEach((user) => {
       mUsers[user.username] = user;
     });

@@ -19,6 +19,8 @@ datasources:
   orgId: 1
   # <string> url
   url: http://graphite:8080/
+  # <string> uid, used to link that source with the provisioned dashboards
+  uid: d34EAUnVz
   # <string> database password, if used
   password:
   # <string> database user, if used
