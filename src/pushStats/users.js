@@ -5,39 +5,52 @@ const SERVER_PORT = parseInt(/** @type {string} */ (process.env.SERVER_PORT), 10
 
 /**
  * Check whether there's a server nearby
- * @returns {Promise<[string, number]>}
+ * @returns {Promise<[string, number] | undefined>}
  */
 async function checkLocalhostServer() {
+  console.log('Checking for local server');
   const hosts = [
     'localhost',
     'host.docker.internal',
     '172.17.0.1',
   ];
-  /** @type {Promise<[string, number]>[]} */
+  /** @type {Promise<[string, number] | undefined>[]} */
   const promises = [];
   for (const host of hosts) {
     const p = new Promise((resolve, reject) => {
       const sock = new net.Socket();
-      sock.setTimeout(2500);
-      console.log(`[${host}:${SERVER_PORT}] attempting connection`);
+      function kill() {
+        sock.removeAllListeners();
+        sock.end();
+        sock.destroy();
+        sock.unref();
+      }
+      sock.setTimeout(200);
       sock
-        .on('connect', () => {
-          sock.destroy();
+        .once('connect', () => {
+          kill();
           resolve([host, SERVER_PORT]);
         })
-        .on('error', () => {
-          sock.destroy();
-          reject();
+        .once('error', () => {
+          kill();
+          reject(new Error('Error connecting to server'));
         })
-        .on('timeout', () => {
-          sock.destroy();
-          reject();
+        .once('timeout', () => {
+          kill();
+          reject(new Error('Timeout connecting to server'));
         })
         .connect(SERVER_PORT, host);
     });
     promises.push(p);
   }
-  return Promise.any(promises);
+  promises.push(new Promise((resolve) => { setTimeout(() => resolve(undefined), 1000); }));
+  const server = await Promise.any(promises);
+  if (server) {
+    console.log(`Found server at ${server[0]}:${server[1]}`);
+  } else {
+    console.log('No server found');
+  }
+  return server;
 }
 
 /**
@@ -78,6 +91,9 @@ export default async function loadUsers() {
     if (!user.host) {
       try {
         if (user.type === 'private') {
+          if (!localServer) {
+            throw new Error('no local server available, and host unspecified');
+          }
           [user.host, user.port] = localServer;
         } else {
           [user.host, user.port] = getHostInfoFromType(user.type);
@@ -101,5 +117,6 @@ export default async function loadUsers() {
     }
     validUsers.push(user);
   }
+  console.log(`Loaded ${validUsers.length} users (out of ${users.length})`);
   return validUsers;
 }
