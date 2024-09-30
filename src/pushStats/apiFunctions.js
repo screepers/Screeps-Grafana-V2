@@ -131,7 +131,7 @@ async function req(options) {
   return Promise.race([executeReq, maxTime])
     .then((result) => {
       if (result === 'Timeout') {
-        logger.log('info', 'Timeout hit!', new Date(), JSON.stringify(options), reqBody);
+        logger.log('info', { data: 'Timeout hit!', options });
         return undefined;
       }
       if (typeof result === 'string' && result.startsWith('Rate limit exceeded')) {

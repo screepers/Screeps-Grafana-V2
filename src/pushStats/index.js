@@ -181,6 +181,10 @@ class ManageStats {
       ? await ApiFunc.getMemory(userinfo, shard)
       : await ApiFunc.getSegmentMemory(userinfo, shard);
 
+    if (!stats) {
+      logger.error(`Failed to grab memory from ${userinfo.username} in ${shard}`);
+      return;
+    }
     if (Object.keys(stats).length === 0) return;
 
     console.log(`Got memory from ${userinfo.username} in ${shard}`);
