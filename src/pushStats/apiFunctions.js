@@ -77,16 +77,26 @@ function getRequestOptions(info, path, method = 'GET', body = {}) {
     'Content-Length': Buffer.byteLength(JSON.stringify(body)),
   };
 
+  const slashPos = info.host.indexOf('/');
+  let realPath = path;
+  let realHost = info.host;
+  if (slashPos !== -1) {
+    let hostPath = info.host.substring(slashPos + 1);
+    if (hostPath[hostPath.length - 1] !== '/' && path[0] !== '/') hostPath += '/';
+    realPath = hostPath + path;
+    realHost = info.host.substring(0, slashPos);
+  }
+
   if (info.username) headers['X-Username'] = info.username;
   if (info.token) headers['X-Token'] = info.token;
   return {
-    host: info.host,
+    host: realHost,
     port: info.port,
-    path,
+    path: realPath,
     method,
     headers,
     body,
-    isHTTPS: info.type === 'mmo',
+    isHTTPS: info.type === 'mmo' || info.type === 'season',
   };
 }
 
@@ -131,7 +141,7 @@ async function req(options) {
   return Promise.race([executeReq, maxTime])
     .then((result) => {
       if (result === 'Timeout') {
-        logger.log('info', 'Timeout hit!', new Date(), JSON.stringify(options), reqBody);
+        logger.log('info', { data: 'Timeout hit!', options });
         return undefined;
       }
       if (typeof result === 'string' && result.startsWith('Rate limit exceeded')) {

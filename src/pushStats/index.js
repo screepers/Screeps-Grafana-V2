@@ -65,22 +65,22 @@ class ManageStats {
    */
   async handleUsers(host, hostUsers) {
     console.log(`[${host}] Handling Users`);
+    const now = new Date();
 
-    const beginningOfMinute = new Date().getSeconds() < 15;
+    const beginningOfMinute = now.getSeconds() < 15;
+    if (host === 'screeps.com' && !beginningOfMinute) {
+      console.log(`[${host}] not the right time to get stats, skipping`);
+      return;
+    }
+
     /** @type {(Promise<void>)[]} */
     const getStatsFunctions = [];
     for (const user of hostUsers) {
       try {
         if (user.host !== host) continue;
 
-        const rightMinuteForShard = new Date().getMinutes() % user.shards.length === 0;
-        const shouldContinue = !beginningOfMinute || !rightMinuteForShard;
-        if (user.type === 'mmo' && shouldContinue) continue;
-        if (user.type === 'season' && shouldContinue) continue;
-
-        for (const shard of user.shards) {
-          getStatsFunctions.push(this.getStats(user, shard));
-        }
+        const shard = user.shards[now.getMinutes() % user.shards.length];
+        getStatsFunctions.push(this.getStats(user, shard));
       } catch (error) {
         logger.error(error);
       }
@@ -181,6 +181,10 @@ class ManageStats {
       ? await ApiFunc.getMemory(userinfo, shard)
       : await ApiFunc.getSegmentMemory(userinfo, shard);
 
+    if (!stats) {
+      logger.error(`Failed to grab memory from ${userinfo.username} in ${shard}`);
+      return;
+    }
     if (Object.keys(stats).length === 0) return;
 
     console.log(`Got memory from ${userinfo.username} in ${shard}`);
